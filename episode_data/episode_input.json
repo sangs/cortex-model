@@ -1,0 +1,113 @@
+[
+  {
+    "podcast": {
+      "title": "Data Archives - Software Engineering Daily",
+      "id": "Data Archives - Software Engineering Daily"
+    },
+    "episode": {
+      "number": 1654,
+      "name": "Iceberg at Netflix and Beyond with Ryan Blue",
+      "published_date": "2024-03-07",
+      "link": "https://podcasts.apple.com/us/podcast/iceberg-at-netflix-and-beyond-with-ryan-blue/id1232093653?i=1000648333293",
+      "description": "Apache Iceberg is an open source high-performance format for huge data tables. Iceberg enables the use of SQL tables for big data, while making it possible for engines like Spark and Hive to safely work with the same tables, at the same time. Iceberg was started at Netflix by Ryan Blue and Dan Weeks, and was open-sourced and donated to the Apache Software Foundation in November 2018. It has now been adopted at many other companies including Airbnb, Apple, and Lyft. Ryan Blue joins the podcast to describe the origins of Iceberg, how it works, the problems it solves, collaborating with Apple and others to open-source it, and more. This episode is hosted by Lee Atchison. Lee Atchison is a software architect, author, and thought leader on cloud computing and application modernization. His bestselling book, Architecting for Scale is an essential resource for technical teams looking to maintain high availability and manage risk in their cloud environments. Lee is the host of his podcast, Modern Digital Business, produced for people looking to build and grow their digital business. Listen at mdb.fm. Follow Lee at softwarearchitectureinsights.com. See all his content at leeatchison.com.",
+      "transcript_chunks": [
+        {"fileName": "Iceberg-At-NetflixAndBeyond-RyanBlue.txt", "fileSource": "ep1654"}
+      ],
+      "reference_links": [
+        {"text": "Apache Iceberg", "url": "https://iceberg.apache.org/"},
+        {"text": "Spark", "url": "https://spark.apache.org/"},
+        {"text": "Hive", "url": "https://hive.apache.org/"},
+        {"text": "S3", "url": "https://aws.amazon.com/s3/"},
+        {"text": "parquet format", "url": "https://parquet.apache.org/"},
+        {"text": "Hadoop ecosystem", "url": "https://hadoop.apache.org/"},
+        {"text": "Pig", "url": "https://pig.apache.org/"},
+        {"text": "Trino", "url": "https://trino.io/"},
+        {"text": "Presto", "url": "https://prestodb.io/"},
+        {"text": "Flink", "url": "https://flink.apache.org/"},
+        {"text": "HDFS", "url": "https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html"},
+        {"text": "SQL", "url": "https://en.wikipedia.org/wiki/SQL"},
+        {"text": "ACID transactions", "url": "https://en.wikipedia.org/wiki/ACID"},
+        {"text": "Git", "url": "https://git-scm.com/"},
+        {"text": "DuckDB", "url": "https://duckdb.org/"},
+        {"text": "Snowflake", "url": "https://www.snowflake.com/"},
+        {"text": "Redshift", "url": "https://aws.amazon.com/redshift/"},
+        {"text": "Starburst", "url": "https://www.starburst.io/"},
+        {"text": "EMR", "url": "https://aws.amazon.com/emr/"},
+        {"text": "write-ahead log", "url": "https://en.wikipedia.org/wiki/Write-ahead_logging"},
+        {"text": "Tabular", "url": "https://www.tabular.io/"},
+        {"text": "Tabular.io", "url": "https://www.tabular.io/"}
+      ],
+      "topics": [
+        {
+          "name": "Apache Iceberg Table Format and Data Lakes",
+          "concepts": [
+            {"name": "open-source, high-performance table format", "description": "Apache Iceberg, an open-source, high-performance table format that provides a robust metadata layer over object storage, enablingThe core concept being discussed is Apache Iceberg, an open-source, high-performance table format that provides a robust metadata layer over object storage, enabling database-type capabilities like ACID transactions, SQL schema evolution, and data versioning for huge data tables in a multi-engine data lake environment"}
+          ],
+          "technologies": ["Apache Iceberg", "Spark", "Hive", "S3", "parquet files", "parquet format", "Hadoop ecosystem", "Pig", "Trino", "Presto", "Flink", "HDFS", "SQL", "ACID transactions", "Git", "DuckDB", "Snowflake", "Redshift", "Starburst", "EMR", "write-ahead log", "Tabular", "Tabular.io"]
+        }
+      ]
+    },
+    "person": {
+      "hosts": [{ "name": "Lee Atchison" }],
+      "guests": [{ "name": "Ryan Blue" }],
+      "listeners": [{ "name": "Sangeetha Ramadurai" }]
+    }
+  },
+  {
+    "podcast": {
+      "title": "The Data Exchange with Ben Lorica",
+      "id": "The Data Exchange with Ben Lorica"
+    },
+    "episode": {
+      "number": 2025040307,
+      "name": "Prompts as Functions: The BAML Revolution in AI Engineering",
+      "published_date": "2025-04-03",
+      "link": "https://thedataexchange.media/baml-revolution-in-ai-engineering/",
+      "description": "David Hughes, Principal Data & AI Solution Architect at Enterprise Knowledge. Our discussion centers on BAML, a domain-specific language that transforms prompts into structured functions with defined inputs and outputs, enabling developers to create more deterministic and maintainable AI applications. This approach fundamentally changes prompt engineering by focusing on output schemas rather than crafting perfect prompt text, resulting in more robust applications that can adapt to new models without significant refactoring. BAML's polyglot nature, testing capabilities, and runtime adaptability make it particularly valuable for enterprise environments and agentic AI applications, including multimodal systems.",
+      "transcript_chunks": [
+        {"fileName": "PromptsAsFunctions-BAML-Revolution_AI-Engineering.txt", "fileSource": "ep20250403.07"}
+      ],
+      "reference_links": [
+        {"text": "BAML (Binding and Modeling Language)", "url": "https://www.getbaml.com/"},
+        {"text": "LangChain", "url": "https://www.langchain.com/"},
+        {"text": "LlamaIndex", "url": "https://www.llamaindex.ai/"},
+        {"text": "Haystack", "url": "https://haystack.deepset.ai/"},
+        {"text": "Pydantic", "url": "https://pydantic.dev/"},
+        {"text": "BAML's Playground (IDE extension)", "url": "https://www.getbaml.com/"},
+        {"text": "Rust", "url": "https://www.rust-lang.org/"},
+        {"text": "Python", "url": "https://www.python.org/"},
+        {"text": "Crew (agentic framework)", "url": "https://www.crewai.com/"},
+        {"text": "LangGraph (agentic framework)", "url": "https://github.com/langchain-ai/langgraph"},
+        {"text": "Donew (agentic apps)", "url": "https://donew.io/"},
+        {"text": "Kùzu (GraphRAG/graph database)", "url": "https://www.kuzudb.com/"},
+        {"text": "VS Code (IDE)", "url": "https://code.visualstudio.com/"},
+        {"text": "Cursor (IDE)", "url": "https://www.cursor.so/"},
+        {"text": "BAML Discord", "url": "https://discord.gg/BTNBeXGuaS"},
+        {"text": "A video version of this conversation is available on our YouTube channel", "url": "https://www.youtube.com/c/GradientFlow?sub_confirmation=1"},
+        {"text": "Seven Features That Make BAML Ideal for AI Developers", "url": "https://gradientflow.substack.com/p/structured-prompt-engineering-made"},
+        {"text": "Structure Is All You Need", "url": "https://gradientflow.substack.com/p/structure-is-all-you-need"},
+        {"text": "GraphRAG: Design Patterns, Challenges, Recommendations", "url": "https://gradientflow.substack.com/p/graphrag-design-patterns-challenges"},
+        {"text": "Faster Iteration, Lower Costs: BAML's Impact on AI Projects", "url": "https://gradientflow.substack.com/i/158555185/faster-iteration-lower-costs-bamls-impact-on-ai-projects"},
+        {"text": "What AI Teams Need to Know for 2025", "url": "https://gradientflow.substack.com/p/ai-in-2025-dont-miss-these-key-trends"},
+        {"text": "AI Unlocked – Overcoming The Data Bottleneck", "url": "https://www.youtube.com/watch?v=GnCA8VcCazY"},
+        {"text": "Vaibhav Gupta → Unleashing the Power of BAML in LLM Applications", "url": "https://thedataexchange.media/baml/"},
+        {"text": "Semih Salihoglu → The Intersection of LLMs, Knowledge Graphs, and Query Generation", "url": "https://thedataexchange.media/the-intersection-of-llms-knowledge-graphs-and-query-generation/"},
+        {"text": "Mars Lan → The Security Debate: How Safe is Open-Source Software", "url": "https://thedataexchange.media/the-security-debate-how-safe-is-open-source-software/"}
+      ],
+      "topics": [
+        {
+          "name": "BAML: Prompts as Structured Functions",
+          "concepts": [
+            {"name": "BAML: Prompts as Structured Functions", "description": "BAML (Binding and Modeling Language) is a polyglot domain-specific language (DSL) that defines LLM prompts as structured functions with clear inputs and outputs. This approach shifts development focus from crafting perfect prompt text to defining precise schemas, similar to Pydantic, to ensure deterministic and reliable output structures. BAML addresses the brittleness found in traditional prompt-centric frameworks by offering built-in schema-aligned parsing, which ensures outputs conform to the defined structure, simplifies debugging through programmatic assertions, and reduces costs by eliminating the need for re-prompting. This paradigm also promotes breaking down complex tasks into smaller, type-safe, atomic units for more resilient outputs."}
+          ],
+          "technologies": ["BAML (Binding and Modeling Language)", "LangChain", "LlamaIndex", "Haystack", "Pydantic", "BAML's Playground", "Rust", "Python", "Crew", "LangGraph", "Language models (LLMs)", "JSON", "API", "Donew", "Kuzu", "KuzuDB", "VS Code", "Cursor", "Multimodal graph RAG", "Text-only RAG", "Vector database", "Foundation models", "Lava agent model", "Base64 format", "Graph database", "Agent"]
+        }
+      ]
+    },
+    "person": {
+      "hosts": [{ "name": "Ben Lorica" }],
+      "guests": [{ "name": "David Hughes" }],
+      "listeners": [{ "name": "Sangeetha Ramadurai" }]
+    }
+  }
+]

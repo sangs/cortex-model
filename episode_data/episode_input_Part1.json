@@ -1,0 +1,228 @@
+[
+  {
+    "podcast": {
+      "title": "Data Engineering Podcast",
+      "id": "Data Engineering Podcast"
+    },
+    "episode": {
+      "number": 477,
+      "name": "High Performance And Low Overhead Graphs With KuzuDB",
+      "published_date": "2025-08-18",
+      "link": "https://www.dataengineeringpodcast.com/episodepage/kuzudb-embedded-graph-database-episode-477",
+      "description": "In this episode of the Data Engineering Podcast Prashanth Rao, an AI engineer at KuzuDB, talks about their embeddable graph database. Prashanth explains how KuzuDB addresses performance shortcomings in existing solutions through columnar storage and novel join algorithms. He discusses the usability and scalability of KuzuDB, emphasizing its open-source nature and potential for various graph applications. The conversation explores the growing interest in graph databases due to their AI and data engineering applications, and Prashanth highlights KuzuDB's potential in edge computing, ephemeral workloads, and integration with other formats like Iceberg and Parquet.",
+      "transcript_chunks": [
+        {"fileName": "kuzudb-embeddable-graph-database.txt", "fileSource": "ep477"}
+      ],
+      "reference_links": [
+        {"text": "KuzuDB", "url": "https://kuzudb.com/"},
+        {"text": "BERT", "url": "https://en.wikipedia.org/wiki/BERT_(language_model)"},
+        {"text": "Transformer Architecture", "url": "https://en.wikipedia.org/wiki/Transformer_(deep_learning_architecture)"},
+        {"text": "DuckDB", "url": "https://duckdb.org/"},
+        {"text": "DuckDB podcast episode", "url": "https://www.dataengineeringpodcast.com/duckdb-in-process-olap-database-episode-270/"},
+        {"text": "MonetDB", "url": "https://www.monetdb.org/"},
+        {"text": "Umbra DB", "url": "https://umbra-db.com/"},
+        {"text": "sqlite", "url": "https://www.sqlite.org/"},
+        {"text": "Cypher Query Language", "url": "https://en.wikipedia.org/wiki/Cypher_(query_language)"},
+        {"text": "Property Graph", "url": "https://en.wikipedia.org/wiki/Property_graph"},
+        {"text": "Neo4j", "url": "https://neo4j.com/"},
+        {"text": "GraphRAG", "url": "https://microsoft.github.io/graphrag/"},
+        {"text": "Context Engineering", "url": "https://www.promptingguide.ai/guides/context-engineering-guide"},
+        {"text": "Write-Ahead Log", "url": "https://en.wikipedia.org/wiki/Write-ahead_logging"},
+        {"text": "Bauplan", "url": "https://www.bauplanlabs.com/"},
+        {"text": "Iceberg", "url": "https://iceberg.apache.org/"},
+        {"text": "DuckLake", "url": "https://ducklake.select/"},
+        {"text": "Lance", "url": "https://lancedb.github.io/lance/"},
+        {"text": "Lance DB", "url": "https://lancedb.com/"},
+        {"text": "Arrow", "url": "https://arrow.apache.org/"},
+        {"text": "Polars", "url": "https://docs.pola.rs/"},
+        {"text": "Arrow DataFusion", "url": "https://datafusion.apache.org/"},
+        {"text": "GQL", "url": "https://www.gqlstandards.org/"},
+        {"text": "ClickHouse", "url": "https://clickhouse.com/"},
+        {"text": "Adjacency List", "url": "https://en.wikipedia.org/wiki/Adjacency_list"},
+        {"text": "Why Graph DAtabases Need New Join Algorithms", "url": "https://blog.kuzudb.com/post/wcoj/"},
+        {"text": "KuzuDB WASM", "url": "https://docs.kuzudb.com/client-apis/wasm/"},
+        {"text": "RAG == Retrieval Augmented Generation", "url": "https://en.wikipedia.org/wiki/Retrieval-augmented_generation"},
+        {"text": "NetworkX", "url": "https://networkx.org/"}  
+       ],
+      "topics": [
+        {
+          "name": "Embeddable Graph Databases with KuzuDB",
+          "concepts": [
+            {"name": "Embeddable Graph Database", "description": "The concept discussed in the Data Engineering Podcast episode about KuzuDB centers on its role as a modern, embeddable graph database designed to address performance shortcomings in existing graph solutions. The conversation highlights KuzuDB’s use of columnar storage, novel join algorithms, and vectorization to improve performance and scalability. It also covers KuzuDB’s open-source nature, ease of use for developers, and its applications in areas like AI, data engineering, edge computing, and ephemeral workloads. The discussion further explores KuzuDB’s integration with formats like Iceberg and Parquet, and its potential impact on the broader graph database ecosystem."}
+          ],
+          "technologies": ["MonetDB", "TopDB", "Umbra", "Apache Iceberg", "Parquet", "Polars data fraome", "Lance tables", "KuzuDB", "Kuzu", "Graph database", "Arrow ecosystem", "Lakehouse ecosystem", "Database"]
+        }
+      ]
+    },
+    "person": {
+        "hosts": [{ "name": "Tobias Macey" }],
+        "guests": [{ "name": "Prashanth Rao" }],
+        "listeners": [{ "name": "Sangeetha Ramadurai" }]
+    }
+  },
+  {
+    "podcast": {
+      "title": "Data Engineering Podcast",
+      "id": "Data Engineering Podcast"
+    },
+    "episode": {
+      "number": 480,
+      "name": "Simplifying Lakehouse Ecosystem With DuckLake",
+      "published_date": "2025-09-10",
+      "link": "https://www.dataengineeringpodcast.com/ducklake-easy-data-lakehouse-format-episode-480",
+      "description": "In this episode of the Data Engineering Podcast Hannes Mühleisen and Mark Raasveldt, the creators of DuckDB, share their work on Duck Lake, a new entrant in the open lakehouse ecosystem. They discuss how Duck Lake, is focused on simplicity, flexibility, and offers a unified catalog and table format compared to other lakehouse formats like Iceberg and Delta. Hannes and Mark share insights into how Duck Lake revolutionizes data architecture by enabling local-first data processing, simplifying deployment of lakehouse solutions, and offering benefits such as encryption features, data inlining, and integration with existing ecosystems. In this episode of the Data Engineering Podcast, the team discusses DuckLake and its role in simplifying the lakehouse ecosystem. The conversation covers the challenges of managing complex data architectures and how DuckLake provides a unified interface for various data formats and storage systems.",
+      "transcript_chunks": [
+        {"fileName": "DuckLake-SimplifyingLakehouseEcosystem-ep480.txt", "fileSource": "ep480"}
+      ],
+      "reference_links": [
+        {"text": "DuckLake", "url": "https://ducklake.select/"},
+        {"text": "Apache Iceberg", "url": "https://iceberg.apache.org/"},
+        {"text": "Delta Lake", "url": "https://delta.io/"},
+        {"text": "Apache Hudi", "url": "https://hudi.apache.org/"},
+        {"text": "DuckDB Labs", "url": "https://duckdblabs.com/"},
+        {"text": "MySQL", "url": "https://www.mysql.com/"},
+        {"text": "CWI", "url": "https://www.cwi.nl/en/"},
+        {"text": "MonetDB", "url": "https://www.monetdb.org/"},
+        {"text": "Iceberg REST Catalog", "url": "https://iceberg.apache.org/rest-catalog-spec/"},
+        {"text": "Lance", "url": "https://lancedb.github.io/lance/"},
+        {"text": "DuckDB Iceberg Connector", "url": "https://duckdb.org/docs/stable/core_extensions/iceberg/overview.html"},
+        {"text": "ACID == Atomicity, Consistency, Isolation, Durability", "url": "https://en.wikipedia.org/wiki/ACID"},
+        {"text": "MotherDuck", "url": "https://motherduck.com/"},
+        {"text": "MotherDuck Managed DuckLake", "url": "https://motherduck.com/blog/announcing-ducklake-support-motherduck-preview/"},
+        {"text": "Trino", "url": "https://trino.io/"},
+        {"text": "Spark", "url": "https://spark.apache.org/"},
+        {"text": "Presto", "url": "https://prestodb.io/"},
+        {"text": "Spark DuckLake Demo", "url": "https://motherduck.com/blog/spark-ducklake-getting-started/"},
+        {"text": "Delta Kernel", "url": "https://delta.io/blog/delta-kernel/"},
+        {"text": "Arrow", "url": "https://arrow.apache.org/"},
+        {"text": "dlt", "url": "https://dlthub.com/"},
+        {"text": "S3 Tables", "url": "https://aws.amazon.com/s3/features/tables/"},
+        {"text": "Attribute Based Access Control (ABAC)", "url": "https://en.wikipedia.org/wiki/Attribute-based_access_control"},
+        {"text": "Parquet", "url": "https://parquet.apache.org/"},
+        {"text": "Arrow Flight", "url": "https://arrow.apache.org/docs/format/Flight.html"},
+        {"text": "Hadoop", "url": "https://hadoop.apache.org/"},
+        {"text": "HDFS", "url": "https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html"},
+        {"text": "DuckLake Roadmap", "url": "https://ducklake.select/roadmap.html"},
+        {"text": "Delta", "url": "https://delta.io/"},
+        {"text": "Hudi", "url": "https://hudi.apache.org/"},
+        {"text": "DuckDB Podcast Episode", "url": "https://www.dataengineeringpodcast.com/duckdb-in-process-olap-database-episode-270/"}
+      ],
+      "topics": [
+        {
+          "name": "Duck Lake: The SQL-Backed Open Standard for Simplified Lakehouse Metadata",
+          "concepts": [
+            {"name": "Duck Lake - a unified catalog and table format", "description": "The concept being discussed is Duck Lake, which is the latest entrant into the open lakehouse ecosystem and a reimagination of lakehouse formats. This unified catalog and table format simplifies the traditional lakehouse stack by utilizing a SQL relational database for all the metadata management. The actual data files, such as Parquet files, are then stored on a standard blob store or object store like S3. This architectural choice aims to reduce complexity and allow for benefits like transactionality on the entire catalog level and easier scalability"}
+          ],
+          "technologies": ["DuckLake", "Apache Iceberg", "Delta Lake", "Apache Hudi", "DuckDB", "Lakehouse ecosystem"]
+        }
+      ]
+    },
+    "person": {
+        "hosts": [{ "name": "Tobias Macey" }],
+        "guests": [{ "name": "Hannes Mühleisen"}, {"name": "Mark Raasveldt"}],
+        "listeners": [{ "name": "Sangeetha Ramadurai" }]
+    }
+  },
+  {
+    "podcast": {
+      "title": "Data Engineering Podcast",
+      "id": "Data Engineering Podcast"
+    },
+    "episode": {
+      "number": 473,
+      "name": "Delayed View Semantics In Incremental Data Processing",
+      "published_date": "2025-08-14",
+      "link": "https://www.dataengineeringpodcast.com/episodepage/delayed-view-semantics-incremental-data-processing-episode-473",
+      "description": "In this episode of the Data Engineering Podcast Dan Sotolongo from Snowflake talks about the complexities of incremental data processing in warehouse environments. Dan discusses the challenges of handling continuously evolving datasets and the importance of incremental data processing for optimized resource use and reduced latency. He explains how delayed view semantics can address these challenges by maintaining up-to-date results with minimal work, leveraging Snowflake's dynamic tables feature. The conversation also explores the broader landscape of data processing, comparing batch and streaming systems, and highlights the trade-offs between them. Dan emphasizes the need for a unified theoretical framework to discuss semantic guarantees in data pipelines and introduces the concept of delayed view semantics, touching on the limitations of current systems and the potential of dynamic tables to simplify complex data workflows. This episode explores delayed view semantics in incremental data processing, discussing how to handle late-arriving data and maintain consistency in streaming systems. The conversation covers various approaches to managing temporal data and ensuring data quality in real-time processing pipelines.",
+      "transcript_chunks": [
+        {"fileName": "delayed-view-semantics-incremental-data-processing-ep473.txt", "fileSource": "ep473"}
+      ],
+      "reference_links": [
+        {"text": "Apache Flink", "url": "https://flink.apache.org/"},
+        {"text": "Apache Kafka", "url": "https://kafka.apache.org/"},
+        {"text": "Apache Beam", "url": "https://beam.apache.org/"},
+        {"text": "Watermarks", "url": "https://beam.apache.org/documentation/watermarks/"},
+        {"text": "Delayed View Semantics", "url": "https://docs.google.com/presentation/d/1rl_e4xYJKQq0GVrQI70oHLM-DovJS10DL-893LoOhSI/edit?slide=id.g36a30e05d7a_1_1147#slide=id.g36a30e05d7a_1_1147"},
+        {"text": "Snowflake", "url": "https://www.snowflake.com/en/"},
+        {"text": "NumPy", "url": "https://numpy.org/"},
+        {"text": "IPython", "url": "https://ipython.org/"},
+        {"text": "Jupyter", "url": "https://jupyter.org/"},
+        {"text": "Flink", "url": "https://flink.apache.org/"},
+        {"text": "Spark Streaming", "url": "https://spark.apache.org/docs/latest/streaming-programming-guide.html"},
+        {"text": "Kafka", "url": "https://kafka.apache.org/"},
+        {"text": "Snowflake Dynamic Tables", "url": "https://docs.snowflake.com/en/user-guide/dynamic-tables-about"},
+        {"text": "Airflow", "url": "https://airflow.apache.org/"},
+        {"text": "Dagster", "url": "https://dagster.io/"},
+        {"text": "Streaming Watermarks", "url": "https://medium.com/@guptapavitra/understanding-watermarking-and-late-data-in-data-streaming-2b2e67bded36"},
+        {"text": "Materialize", "url": "https://materialize.com/"},
+        {"text": "Feldera", "url": "https://www.feldera.com/"},
+        {"text": "ACID", "url": "https://en.wikipedia.org/wiki/ACID"},
+        {"text": "CAP Theorem", "url": "https://en.wikipedia.org/wiki/CAP_theorem"},
+        {"text": "Linearizability", "url": "https://en.wikipedia.org/wiki/Linearizability"},
+        {"text": "Serializable Consistency", "url": "https://en.wikipedia.org/wiki/Database_transaction_schedule#Serializable"},
+        {"text": "SIGMOD", "url": "https://sigmod.org/"},
+        {"text": "Materialized Views", "url": "https://en.wikipedia.org/wiki/Materialized_view"},
+        {"text": "dbt", "url": "https://www.getdbt.com/"},
+        {"text": "Data Vault", "url": "https://en.wikipedia.org/wiki/Data_vault_modeling"},
+        {"text": "Apache Iceberg", "url": "https://iceberg.apache.org/"},
+        {"text": "Databricks Delta", "url": "https://delta.io/"},
+        {"text": "Hudi", "url": "https://hudi.apache.org/"},
+        {"text": "Dead Letter Queue", "url": "https://en.wikipedia.org/wiki/Dead_letter_queue"},
+        {"text": "pg_jvm", "url": "https://github.com/sraoss/pg_ivm"},
+        {"text": "Property Based Testing", "url": "https://increment.com/testing/in-praise-of-property-based-testing/"},
+        {"text": "Iceberg V3 Row Lineage", "url": "https://iceberg.apache.org/spec/#row-lineage"},
+        {"text": "Prometheus", "url": "https://prometheus.io/"}
+      ],
+      "topics": [
+        {
+          "name": "Delayed View Semantics and Incremental Processing",
+          "concepts": [
+            {"name": "Delayed View Semantics", "description": "The concept discussed is delayed view semantics, which is a theoretical framework for incremental data processing in data warehouse environments. Delayed view semantics provides a common language to describe the guarantees offered by data pipelines, specifically focusing on producing the result of a view—a point-in-time representation of source data. This approach allows for micro-batch incremental processing natively inside the database, as seen with dynamic tables in Snowflake. However, it does not address all use cases, especially those that require handling deleted data or changes outside of standard view semantics. The framework is mainly about defining and communicating the guarantees and behaviors of data processing pipelines, rather than enforcing a specific implementation."}
+          ],
+          "technologies": ["Apache Flink", "Apache Kafka", "Apache Beam", "Apache Spark Streaming", "Materialized Views", "Dynamic Tables", "Incremental View Maintenance Engines", "Batch Systems", "Streaming Programming Models", "Apache Flink", "Dataflow", "Apache Iceberg", "Postgres", "Materialise", "Streaming Technology", "Apache Kafka", "Lakehouse Architectures", "Lakehouse ecosystem", "Database", "Snowflake"]
+        }
+      ]
+    },
+    "person": {
+        "hosts": [{ "name": "Tobias Macey" }],
+        "guests": [{ "name": "Dan Sotolongo" }],
+        "listeners": [{ "name": "Sangeetha Ramadurai" }]
+    }
+  },
+  {
+    "podcast": {
+      "title": "Software Engineering Daily",
+      "id": "Software Engineering Daily"
+    },
+    "episode": {
+      "number": 1836,
+      "name": "Anthropic And Model Context Protocol (MCP) With David Soria Parra",
+      "published_date": "2025-05-13",
+      "link": "https://www.dataengineeringpodcast.com/episodepage/anthropic-model-context-protocol-mcp-david-soria-parra-episode-1836",
+      "description": "The Model Context Protocol, or MCP, is a new open standard that connects AI assistants to arbitrary data sources and tools, such as codebases, APIs, and content repositories. Instead of building bespoke integrations for each system, developers can use MCP to establish secure, scalable connections between AI models and the data they need. By standardizing this connection layer, MCP enables models to access relevant information in real time, leading to more accurate and context-aware responses. David Soria Parra is a Member of the Technical Staff at Anthropic, where he co-created the Model Context Protocol. He joins the podcast to talk about his career and the future of context-aware AI.",
+      "transcript_chunks": [
+        {"fileName": "AnthropicAndModelContextProtocol-MCP-WithDavidSoriaParra-ep1836.txt", "fileSource": "ep1836"}
+      ],
+      "reference_links": [
+        {"text": "Model Context Protocol", "url": "https://modelcontextprotocol.io/"},
+        {"text": "Anthropic", "url": "https://www.anthropic.com/"},
+        {"text": "Claude", "url": "https://www.anthropic.com/claude"},
+        {"text": "OpenAI", "url": "https://openai.com/"}
+      ],
+      "topics": [
+        {
+          "name": "Model Context Protocol (MCP): The Open Standard for Context-Aware AI",
+          "concepts": [
+            {"name": "Model Context Protocol (MCP)", "description": "The Model Context Protocol (MCP) is a new open standard or protocol co-created by David Soria Parra at Anthropic. It functions as a standardized connection layer between AI applications (clients, such as IDEs or Cloud Desktop) and context providers (servers/programs). The core purpose of MCP is to securely and scalably connect AI assistance to arbitrary data sources and tools, including APIs, codebases, and content repositories. By standardizing this connection, MCP allows AI models to access relevant information in real time, leading to responses that are more accurate and context-aware. The protocol achieves this through high-level primitives, primarily tools (the most used primitive), resources (which act like files), and prompts (prompt templates). The application uses the information served by the context provider and puts it into the context of the model, facilitating a rich interaction with the Large Language Model (LLM). The protocol itself is model-independent"}
+          ],
+          "technologies": ["Model Context Protocol", "Claude", "OpenAI", "Anthropic", "Language Server Protocol (LSP)", "JSON-RPC", "RAG (Retrieval-Augmented Generation)", "A2A (Application to Application)", "Agent"]
+        }
+      ]
+    },
+    "person": {
+        "hosts": [{ "name": "Jordi Mon Companys" }],
+        "guests": [{ "name": "David Soria Parra" }],
+        "listeners": [{ "name": "Sangeetha Ramadurai" }]
+    }
+  }
+]

@@ -1,0 +1,211 @@
+
+sources:
+    podcast-episode-graph:
+        kind: "neo4j"
+        uri: "neo4j+s://2236ba22.databases.neo4j.io"
+        user: "neo4j"
+        password: "TblL5bF-rgUiFwJATI6Gy9K3z6HmwuLWA4w7wr_qm0g"
+    cortex-os-mentalmodel:
+        kind: http
+        baseUrl: "http://localhost:8000"
+tools:
+
+  get_context:
+    kind: neo4j-cypher
+    source: podcast-episode-graph
+    statement: |
+        MATCH(n:__MetaContext__ {version:1, useCase:'podcastEpisodeAssistant'})
+        RETURN n.context AS context
+    description: |
+        Gets the context for how to use & access podcast episode data. Always run this first and store in your memory.
+    parameters: []
+
+  get_tool_statistics:
+    kind: neo4j-cypher
+    source: podcast-episode-graph
+    statement: |
+        MATCH (e:Episode)
+        OPTIONAL MATCH (e)-[:HAS_TOPIC]->(t:Topic)
+        OPTIONAL MATCH (e)-[:HAS_REFERENCE_LINK]->(r:ReferenceLink)
+        OPTIONAL MATCH (e)-[:HAS_CHUNK]->(c:Chunk)
+        RETURN count(DISTINCT e) AS total_episodes,
+               count(DISTINCT t) AS total_topics,
+               count(DISTINCT r) AS total_reference_links,
+               count(DISTINCT c) AS total_chunks
+    description: |
+        Get statistics about episodes in the database.
+        Returns counts of episodes, topics, reference links, and transcript chunks.
+    parameters: []
+
+  find_episodes_by_people:
+    kind: neo4j-cypher
+    source: podcast-episode-graph
+    statement: |
+        MATCH (p:Person)-[r]-(e:Episode)
+        WHERE toLower(p.name) CONTAINS toLower($question)
+        RETURN DISTINCT p.name AS person_name,
+               type(r) AS relationship_type,
+               e.name AS episode_name,
+               e.number AS episode_number,
+               e.link AS episode_link,
+               $question AS matched_term
+        ORDER BY e.number DESC
+        LIMIT 10
+    description: |
+        Search for episodes that feature specific people (hosts, guests, or listeners).
+        Searches for people whose names contain the given question string
+        and returns all episodes where they appear, along with their relationship type
+        to the episode (e.g., IS_A_HOST, IS_A_GUEST, LISTENS_TO_EPISODE, etc.).
+    parameters:
+      - name: question
+        type: string
+        description: The name or partial name of the person to search for. Case-insensitive search that matches any part of the person's name.
+
+  find_episodes_by_concept:
+    kind: neo4j-cypher
+    source: podcast-episode-graph
+    statement: |
+        MATCH (e:Episode)-[:HAS_TOPIC]->(t:Topic)-[:COVERS_CONCEPT]->(c:Concept)
+        WHERE toLower(c.name) CONTAINS toLower($question) OR 
+              toLower(c.description) CONTAINS toLower($question)
+        RETURN DISTINCT e.name AS episode_name,
+               e.number AS episode_number,
+               e.link AS episode_link,
+               t.name AS topic_name,
+               c.name AS concept_name,
+               c.description AS concept_description,
+               $question AS matched_term
+        ORDER BY e.number DESC
+        LIMIT 10
+    description: |
+        Search for episodes that discuss specific concepts or ideas.
+        Performs a case-insensitive search on both concept names and descriptions
+        to find relevant episodes.
+    parameters:
+      - name: question
+        type: string
+        description: The concept name or description to search for. Can be a single word or phrase.
+
+  find_episodes_by_topic:
+    kind: neo4j-cypher
+    source: podcast-episode-graph
+    statement: |
+        MATCH (e:Episode)-[:HAS_TOPIC]->(t:Topic)
+        WHERE toLower(t.name) CONTAINS toLower($question) OR 
+              toLower(e.name) CONTAINS toLower($question) OR
+              toLower(e.description) CONTAINS toLower($question)
+        RETURN DISTINCT e.name AS episode_name,
+               e.number AS episode_number,
+               e.link AS episode_link,
+               e.description AS description,
+               collect(t.name) AS topics,
+               $question AS matched_term
+        ORDER BY e.number DESC
+        LIMIT 10
+    description: |
+        Search for episodes that contain specific topics or keywords.
+        Performs a case-insensitive search across episode names, descriptions,
+        and topic names to find episodes that match the given question.
+    parameters:
+      - name: question
+        type: string
+        description: The search term to look for in topics, episode names, or descriptions. Can be a single word or phrase.
+
+  find_episodes_by_technology:
+    kind: neo4j-cypher
+    source: podcast-episode-graph
+    statement: |
+        MATCH (e:Episode)-[:HAS_TOPIC]->(t:Topic)-[:COVERS_TECHNOLOGY]->(tech:Technology)
+        WHERE toLower(tech.name) CONTAINS toLower($question)
+        RETURN DISTINCT e.name AS episode_name,
+               e.number AS episode_number,
+               e.link AS episode_link,
+               t.name AS topic_name,
+               tech.name AS technology_name,
+               $question AS matched_term
+        ORDER BY e.number DESC
+        LIMIT 10
+    description: |
+        Search for episodes that discuss specific technologies or tools.
+        Performs a case-insensitive search on technology names to find relevant episodes
+        that discuss or mention the technology.
+    parameters:
+      - name: question
+        type: string
+        description: The technology name to search for. Can be a single word or phrase.
+
+  find_episodes_by_reference:
+    kind: neo4j-cypher
+    source: podcast-episode-graph
+    statement: |
+        MATCH (e:Episode)-[:HAS_REFERENCE_LINK]->(r:ReferenceLink)
+        WHERE toLower(r.url) CONTAINS toLower($reference_string) OR 
+              toLower(r.text) CONTAINS toLower($reference_string)
+        RETURN e.name AS episode_name,
+               e.number AS episode_number,
+               e.link AS episode_link,
+               e.description AS description,
+               r.url AS reference_url,
+               r.text AS reference_text,
+               $reference_string AS matched_term
+        ORDER BY e.number DESC
+    description: |
+        Find episodes that have reference links containing the input string.
+        Searches for episodes that are connected to reference links
+        through the HAS_REFERENCE_LINK relationship, where the reference URL or text
+        contains the provided string. It performs a case-insensitive search.
+    parameters:
+      - name: reference_string
+        type: string
+        description: String to search for in reference URLs or text.
+
+  find_episodes_by_mentions:
+    kind: neo4j-cypher
+    source: podcast-episode-graph
+    statement: |
+        MATCH (e:Episode)-[:HAS_REFERENCE_LINK]->(r:ReferenceLink)
+        WHERE toLower(r.url) CONTAINS toLower($search_terms) OR 
+              toLower(r.text) CONTAINS toLower($search_terms)
+        RETURN e.name AS episode_name,
+               e.number AS episode_number,
+               e.link AS episode_link,
+               e.description AS description,
+               r.url AS reference_url,
+               r.text AS reference_text,
+               $search_terms AS matched_term
+        ORDER BY e.number DESC
+    description: |
+        Find episodes that mention the input search term in their reference links.
+        Performs a case-insensitive search on reference URLs and text to find relevant episodes.
+        Returns episodes with the matched reference link and which search term was matched.
+    parameters:
+      - name: search_terms
+        type: string
+        description: Search term to look for in reference links. Can be a URL, partial URL, or keyword that might appear in reference text.
+
+  search_episodes_gds_by_question_tool:
+    kind: http
+    source: cortex-os-mentalmodel
+    method: POST
+    path: "/search_episodes_gds_by_question_tool"
+    description: |
+        Extended search that combines vector search seed episodes with precomputed KNN similarities.
+        Accepts a natural-language question and internally generates embeddings.
+        Parameters: question (string), k (integer, default: 5), limit (integer, default: 10).
+        Note: Requires cortex-os-mentalmodel HTTP server to be running on localhost:8000.
+    requestBody: |
+        {
+            "question": "{{.question}}",
+            "k": {{.k}},
+            "limit": {{.limit}}
+        }
+    bodyParams:
+      - name: question
+        description: The user's natural-language question.
+        type: string
+      - name: k
+        description: Number of nearest neighbor chunks to retrieve.
+        type: integer
+      - name: limit
+        description: Total number of rows to return.
+        type: integer

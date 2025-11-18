@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neo4j-employee-graph"
+version = "0.1.0"
+description = "Neo4j Employee Graph Analysis with Vector Search and Agents"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic",
+    "markdown",
+    "reportlab",
+    "langchain",
+    "langchain-openai",
+    "langchain-neo4j",
+    "langchain-experimental",
+    "langgraph",
+    "python-dotenv",
+    "tqdm",
+    "pypdf",
+    "pandas",
+    "neo4j",
+    "neo4j_viz",
+    "google-adk>=1.0.0",
+    "litellm",
+    "openai>=1.107.3",
+    "numpy>=2.0.2",
+    "nltk",
+    "mcp>=1.0.0"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.uv]
+dev-dependencies = []
+package = true
+
+[project.scripts]
+cortex-os-mentalmodel = "cortex_os_mentalmodel_server:main"
+cortex-os-mentalmodel-http = "cortex_os_mentalmodel_http_server:main"
+
+# Constrain setuptools discovery to specific standalone modules to avoid
+# "Multiple top-level packages discovered in a flat-layout" errors.
+[tool.setuptools]
+py-modules = [
+    "expert_tools",
+    "cortex_os_mentalmodel_server",
+    "cortex_os_mentalmodel_http_server"
+]

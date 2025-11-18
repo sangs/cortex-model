@@ -1,0 +1,298 @@
+Tobias Macey:
+
+Hello, and welcome to the Data Engineering Podcast, the show about modern data management.   Data migrations are brutal. They drag on for months, sometimes years, burning through resources and crushing team morale.   DataFold's AI powered migration agent changes all that.   Their unique combination of AI code translation and automated data validation has helped companies complete migrations up to 10 times faster than manual approaches.   And they're so confident in their solution, they'll actually guarantee your timeline in writing.   Ready to turn your year long migration into weeks? Visit dataengineeringpodcast.com/datafolds   today for the details.  
+
+Your host is Tobias Macy, and today, I'm interviewing Dan Sotolongo about the challenges of incremental data processing in warehouse environments and how delayed view semantics help to address the problem. So, Dan, can you start by introducing yourself?  
+Dan Sotolongo:
+
+Yeah. Sure. Thanks for having me on Tobias. My name is Dan Sotlango.   I'm a principal engineer at Snowflake, where I've been working for the last five years to try to make kinda data engineering easier for people.  
+
+Tobias Macey:
+
+And do you remember how you first got started working in data?  
+
+[00:01:15] Dan Sotolongo:
+
+Yeah. Yeah. So I guess, I, you know, I started coding way back in middle school, but it wasn't until my undergrad when   I I made studied, physics and computer science.   And kind of at the intersection of those two, we would do a lot of data analysis for,   physics experiments.   And so it was kind of there that I cut my teeth using, like, NumPy and, like, IPython back when it was called IPython.   Also used a lot of Mathematica, but that's kind of gone by the wayside since then since I don't have a free license anymore.  
+
+[00:01:44] Tobias Macey:
+
+It's funny how many people I know who started in physics and ended up in software.  
+
+[00:01:50] Dan Sotolongo:
+
+Yeah.   There's a lot of gravity to it. Absolutely.  
+
+[00:01:53] Tobias Macey:
+
+And so   in terms of the conversation for today, I'm wondering if you could just start by giving   your definition and your scoping for the term incremental data processing because it can be applied to a lot of different contexts.  
+
+[00:02:10] Dan Sotolongo:
+
+Yeah. That's true. And, I mean, from the highest level, I feel like it starts with   the data processing. Right? And what I tend to focus on or, you know, I called it data engineering just now. I I tend to focus on a context where, you know, you have some kind of continuous source of data that's it doesn't have to be big, but it can potentially scale up, right, if we're talking about Snowflake and cloud data warehouses. That's a lot of the point. But the the kind of continuous nature is also really important,   because   if you don't have a continuously changing dataset, then a lot of the problems just kind of get simplified and and don't really matter. Right? So when you have that continuous   evolving dataset, that could be through, like, an append only kind of situation where you're just, like, adding events to the end of some log,   or it could be, like, a table,   you know, something in your OLTP database that is being updated continuously.  
+
+Very often, you wanna take that source of data, move it somewhere else, transform it into some some structure that makes it more easily queryable and analyzable.   And kind of, like, the the naive easy way to do that is you just dump everything. You do everything   every time, I guess. Anytime you want a new update, you run your entire   transformation pipeline over all of your data. But as you can imagine,   that is insufficient very quickly,   both because of cost,   where you're using a lot of resources that you don't need to, but also in terms of latency. Like, if you have to do everything before you get an updated result, you have to wait around for a while. And so the incremental adjective there, what it's, refers to is trying to do, like, the smallest amount of work you can do in order to bring your results up to date kind of all the way from the sources, kind of propagating it through all the different steps you might have to do. And those steps might start with, like, extracting data from a source,   loading it into a data warehouse like Snowflake,   doing a bunch of transformations, whether those might be, like, joins or aggregations or lookups, all kinds of things you might wanna do. And then, potentially,   you might even wanna do this in within the analytics layer to kind of maintain the the results that you actually wanna query and get really low latency.  
+
+
+
+[00:04:13] Tobias Macey:
+
+A lot of   the problem statement there in terms of incremental   and the unbounded data sources   is very reminiscent of a lot of the conversation   that happens around streaming data workflows where you're dealing with something like a Kafka or a Flink, and you want to do the incremental data loading or incremental data processing in that streaming engine, which obviously brings along with it a lot of operational overhead and technical complexity.   And I'm curious how you think about the   Venn diagram of the problem statement that you're discussing in terms of incremental data processing, particularly with the context of a data warehouse system or some sort of tabular analytics   and   the use cases for that more   continuous   stream processing element that a lot of people are using the things like Flank, Spark Streaming, etcetera, to apply to?  
+
+
+
+[00:05:09] Dan Sotolongo:
+
+Yeah. Yeah. That's a good question. And I feel like the industry as a whole hasn't really come to a solid consensus around all of this yet. But the way I look at it is, so I like to start with, like, what are you trying to achieve? And, usually, that's, like, get some data from an any number of sources,   getting it it to a smaller, hopefully, number of destinations and doing some transformations either along the way or in the destination system.   And once you have that high level description, you can kind of think about, okay. What are my nonfunctional requirements here? Right? Like, what freshness do I need for my results? What kind of resource efficiencies do I need? How many people can I allocate to this in the first place both for development and maintenance? Right? And that's where the engineering really starts getting in. You have to, like, figure out the trade offs between these things.   And that's when you really need to kinda tease apart the Venn diagram. And the the classic distinction is batch systems and streaming systems. Right? And the the way that people would think about this is, like, the batch systems are   more efficient generally. They're kind of easier to maintain.  
+
+But   I I I guess I've always had the sense that,   they're kind of unsatisfying from, like, a theoretical perspective where it feels like, you know, you're kind of instrumenting this, or orchestrating this kind of   complex   machine that it really feels like what you're trying to do is really simple. And streaming systems, they have this, like,   abstract,   aesthetic appeal where they they give you a programming model, and you don't have to reason about, like, the the crazy machine and that you're all the pieces that you're moving around. But then in practice, they tend to be, like, a huge pain to actually   use. Right? And so I think that that's like the traditional Venn diagram.  
+
+But I think what's been missing is some way of pushing out this trade off between, like, what seems hard but is actually easy and what is hard but seems sorry. What seems hard but is easy and what,   seems easy but is hard. And that's kind of where,   I think kind of the more recent crop of incremental view maintenance engines have been trying to step in,   where the idea is   you don't actually need this really complicated programming model that a lot of, like, you know, the flanks and the data flows and the kind of 20 tens, I would say, era of stream processing,   came with. But rather, you can just specify, like, here's the result that I want on some source data and leave it to the engine to kind of keep that thing up to date for you. But even within that specification,   you can, within the implementation, make a whole bunch of trade offs around efficiencies and latencies.  
+
+And so even though you have a large number of systems that are focused on kind of low latency stream processing, that paradigm still applies in what would traditionally be handled by batch. And that's kind of where Snowflake has put our stake in, with the dynamic tables feature where it's a micro batch engine under the covers, but the programming model is a streaming programming model, which means you don't have to think about orchestration and, like, keeping things up to date, thinking about progress and all those things. It kind of handles it for you. But the idea is we're targeting kind of higher latencies, not like one second, but rather a minute,   or all the way scaling up to, like, hours, if you wanna get the efficiencies from that.  
+
+Efficiencies from that.  
+
+[00:08:18] Tobias Macey:
+
+And in terms of the approaches that data engineers   have taken in pursuit of incremental data processing, we've already touched on some of the pure streaming use cases.   But even within the context of tabular analytical data, there have been a number of different technologies and architectures that have been put forward and that people are employing. I'm wondering if you can talk to some of the   common patterns that you have seen engineers and engineering teams apply to this problem space and some of the common challenges that they run into in the implementation of those different patterns.  
+
+[00:08:58] Dan Sotolongo:
+
+Mhmm. Yeah. And I guess this dovetails nicely with the what I just said. We've got, like, the traditional Venn diagram of, like, batch systems   where what you tend to do is you'll have your orchestrator   in Airflow or Dexter or something like that that kind of does things on a periodic basis. And the things that it does, you kind of have to figure out yourself. Right? Like, you might say, look up the most recent chunk of data, do some transformation, put that in another table.   And that works totally fine if you're kind of doing it at a relatively low frequency, but it gets really hairy if you try to crank the latencies up both because the orchestrators weren't designed for that, but also, like, just reasoning about the consistency of your results gets really, really tricky. And so that's what the traditional stream processing kind of half of the Venn diagram has been about, where instead of have like, they kind of absorb the scheduling complexity for you, and they give you this more complicated programming model   and an implementation that implements that. Right? But then they also run into all these operational challenges where they have, like, large amounts of state and they have   distributed checkpointing algorithms and, like, a whole bunch of tuning knobs that you might have to figure out. Some of the programming model concepts might be tricky. I used to like, before I was at Snowflake, I worked at Google on streaming data flow. And we spent a lot of time trying to explain, like, watermarks and triggers, which are kind of really important concepts to express what you need to express, but it can take people a while to kind of wrap their heads around it.  
+
+Yeah. So I guess those tend to be the the two main patterns.   And but the the big challenge, I guess, that I've never liked is you have to make the decision upfront usually. Right? You have to say, oh, we're we're going all in on the streaming thing, and it's gonna be hard, but we're gonna do it because it's important. Or we're gonna, you know, play it safe, keep the batch system around. But then, you know, if your latency requirements change or some new use case comes along that actually would benefit from a few seconds of of freshness,   then you have no way to meet that requirement. Right? And so I think the the place that we're all trying to head is don't force you to make that decision upfront. Make it so that you can kind of specify what you need and then,   make the trade offs later depending on the requirements that come in.  
+
+
+
+[00:11:11] Tobias Macey:
+
+Another approach or another   category of   technologies that I've seen come in to try and   manage some of that technical complexity   and present it in a way that is more   approachable   are systems such as Materialise or Faldara, where they give you a SQL interface and pipeline DB several years ago, but you still need to have some streaming data source that they are going to feed off of, which is usually a Kafka queue or something like that.   And   I'm wondering   what are some of the elements of the way that they're approaching the solution that you see as being insufficient   for the ways that you would like to see the problem solved?  
+
+
+
+[00:11:58] Dan Sotolongo:
+
+Well, I guess   the it's not about insufficiency.   It I feel like what you end up with when you actually try to implement these systems is you have to make decisions, architectural decisions upfront that kind of target a specific   kind of region of the problem space. Right? And Materialise and Caldera are both, like, really interesting, well architected systems   that are targeting a specific kind of region of the problem space space that focuses on low latency.   And so what what does that imply? Right? That implies they have to build indexes   for   kind of,   basically, anytime you wanna do a join, you need an index, in order to make the join happen efficiently.  
+
+They,   that means they have to keep around state, but just I think because of the realities of the market that they're in, they can't be the database. They're not the source of truth. They're a processor. And that means that they kinda have to   reprocess data in order to,   repopulate that state if they need to,   do a backfill or, you know, you need to deploy some new pipeline.   And so there are some limitations   that you   in terms of what you can actually do   in that niche. Right? And so what dynamic tables does is it takes a completely different approach of be part of the database, and the database here is Snowflake.   But in general, this approach works fine kind of regardless as long as you are   either a source of truth or a repository, I should say. Like, a repository for the data, then you kind of have these intrinsic advantages in terms of like, the data is just there. You kind of see you you can observe the workloads that are already running over it, and you can have kind of synergies between the   the way that the data is stored and what you need to do on top of it. And so dynamic tables kind of leans into that, and it just reuses   kind of everything in Snowflake that we could and kind of weaves them together in a way that gives you a micro batch incremental processing system that is just natively inside of your database.  
+
+
+
+[00:13:54] Tobias Macey:
+
+And digging into dynamic tables, I know that the generalized   pattern behind it is something that you termed delayed view semantics. And I'm wondering if you can talk through some of the details of what that is and some of the story behind how you came to that as a solution to this problem space and some of the specifics of   why that is a reasonable approach when operating in that sort of cloud warehouse context.  
+
+[00:14:25] Dan Sotolongo:
+
+Yeah. Yeah. Sure. So   delayed view semantics, fundamentally, what it is is a theoretical framework   for   making it possible to talk about the semantic guarantees that you want out of these data pipelines.   And, you know, like I said, it's a theoretical framework. It's about semantic guarantees. Like, there's a whole, like like, decades of work on, in this space.   So everyone's probably familiar with ACID in kind of the database context.   In the distributed systems context, we have our various consistency models, you know, like linearizability   and sequential consistency, eventual consistency.  
+
+So all all of these things exist.   But   in the when you're kind of shifting perspective   into   a continuous processing pipeline, they kind of fall short. And and the reason they fall short is that most of the time, you don't actually want these pipelines to be, like, perfectly up to date. Right? When when you're in an application context and you're doing transactions against your database, it's really important that, like, everyone sees the same state, and that's what ACID and consistency is all about. Right? But in the context of data engineering, most of the time, what you're doing is kind of deriving   insight from some source of truth that's way upstream. You're not doing, like, this kind of back and forth interactive workload.  
+
+And in that context, you know, your your freshness requirements go way down, and you want to introduce delays. Right? You get massive efficiencies from not having millisecond level, latencies in your analytics   dashboard. Right? And so people do this. Right? But the problem is we don't have a way a a a kind of unified theoretical framework that lets you talk about both in the same context.   Like, what ends up happening is if you try to express delay   inside of, for example, like, your Postgres database,   what you really end up saying is, oh, I have weak isolation. Right? Like, all all all guarantees that you read committed data from some point in time, and that's it. Right? And it turns out that's just not precise enough. Like, the you actually when I say delay, I mean, like, delay   in a very specific way. I mean, like, I want my result to be self consistent, for example, but it's okay if it's five hours old. And if you actually take a look at the the way that   acid and can I I'll leave aside distributed,   consistency because our focus is really acid? If you think look at how isolation is modeled formally, you realize that there is actually no way to have your cake and eat it. That is have delays and still be able to make precise statements about,   your your isolation level. And so we we kind of ran into this by accident. Right? Like, we we designed dynamic tables. We knew what we wanted to build. We knew what customers wanted, and we've had a lot of market validation that we built the right thing.  
+
+But then we you know, four years later or, I guess, dynamic tables has been GA for, like, a year and a half or so, maybe almost two.   We we're writing a Sigma paper,   and we're trying to, like, say, okay. These are the semantics of what dynamic tables do. And trying to model that formally, it was just, like, couldn't do it.   And so as part of that paper,   we decided, okay. Well, we know that this is an important thing to express, and the theory can't express it. So we'll just try to find   the the cleanest way,   to express it. And what we ended up doing is, like, a a really small extension   to the asset model that makes it possible to talk about delay and be precise about what you get.  
+
+
+
+[00:17:46] Tobias Macey:
+
+And in that context, both for the generalized   delayed view semantics theoretical framework and the specific implementation of dynamic tables, what are the problems that you are explicitly   not addressing in that framework?  
+
+[00:18:02] Dan Sotolongo:
+
+Yeah. So I guess there there's kinda two angles you can take on that question.   One is, what does,   delayed view semantics not   address in the first place? I mean, it it's a theoretical framework. All it does is kind of give you a common language for everyone to communicate   about what you're doing. It doesn't force anyone to implement anything in particular. Like, read committed still makes sense in the context of delay view semantics,   and so does serializability.   But it lets us talk about, you know, what are the actual guarantees you offer in which comp in which situation.   The other angle is,   like, what about pipelines that implement delayed view semantics? What can they do or what can they not do more importantly? Right? And, fundamentally,   that limitation is it's kind of in the word. View semantics means   your pipeline is going to produce the result of a view. Right? And what a view is is a kind of point in time view of   the source data.  
+
+And that means that, for example, you can't, like, remember data that's been deleted.   You can't   ignore changes to the source data.   There's a whole bun a whole family of use cases that kind of need to step outside of use semantics, delay or not. And delayed use semantics just can't get you there.  
+
+[00:19:13] Tobias Macey:
+
+Delayed use semantics and the overall concept of use in database context have a long history. They are typically used as a,   not necessarily compute   efficiency, but a cognitive efficiency of not having to   create a whole separate table and manage the the data transition from that. You create a SQL statement that maybe joins together multiple different sources   and gives you a representation   of that that you can refer to concretely without having to type out the same query every single time. And I'm wondering if you can talk to some of the ways that the use cases of   traditional views, materialized views, and delayed view semantics   are gradations   of the same problem space.  
+
+
+
+[00:20:01] Dan Sotolongo:
+
+Yeah. I I think   the way you presented it is I agree with, which is views are really, like, about modeling things and making it easier for you to reason about them.   And once, I guess, once you have the view, like, kind of the the cognitive burden problem has been solved to the extent that I want to solve it right now. Right? And then   materialized views end up being like an operational   extension of that, which is   make it faster query, right, in some sense. And delayed view semantics is really just a way of talking about materialized views and what they actually have. Because if you look at the various implementations of materialized views that different systems offer, because most databases have some form of materialized view, you'll you'll notice that the guarantees are all over the map. Right? Some really sophisticated   databases will give you, like, really   low latency,   inexpensive incremental view maintenance of your materialized views. Some of them will schedule the updates for you, and some of them will just say, nope. You're on your own. You're gonna kind of like, Postgres, at least until recently,   the only way to do materialized view was you had to issue a command to refresh the whole thing, which locked the whole materialized view. And it would usually I I don't know the details of this, but I think it would almost always do a full refresh. Right? This is something that's changing. But in the absence of a common language to talk about it, people would just say, oh, materialized view, and as if that actually was a specific answer. And now that you know, I think it's been recognized for a while that materialized views are   a really good way to think about continuous transformations.  
+
+And so we've had these systems kind of being built to make it possible   to use the concept of a materialized view in different contexts. But now that we have all this this whole, I guess, cornucopia of different systems and different semantics, we we need a way to talk about them and how   they relate to each other.  
+
+[00:21:51] Tobias Macey:
+
+And so digging into the technical   architecture and implementation   of   these delayed view semantics   with dynamic tables as the concrete representation of that. I'm wondering if you can talk to some of   the database level primitives that are necessary to be able to implement   and execute those   transformations   and   provide   the guarantees,   however strict or loose they may be, that you are presenting in that theoretical framework.  
+
+[00:22:24] Dan Sotolongo:
+
+Yeah. Yeah. So, I mean, there's,   many ways to slice the pie. I I guess I can give you a quick overview of how we chose to do it at Snowflake.   The so I I already mentioned, like, the core thesis of what we were trying to do was make sure it's really, really actually part of Snowflake. And that is a double edged sword, but I think it comes out very much net positive,   because Snowflake, it turns out, already has a very high performance column or query processing engine. It already has a sophisticated optimizing SQL compiler. It has a very sophisticated   metadata,   layer for or metadata and control plane for, like, knowing what data is in your tables and, like, managing your catalog and permissions and whole bunch of, like, features that you probably haven't even heard about.  
+
+And it also has a system for doing work in the background, scheduling work for you. And so what we did was we took those four kind of broad components that is, I guess, going in reverse, the scheduler, which decides,   when things need to happen,   the compiler, which will figure out, like, how to turn in your logical SQL statement into something executable,   metadata, which lets the optimizer kind of   do a lot of work,   and then the execution engine, which will actually execute the plan for you. And we've kind of extended them in very specific ways to enable the maintenance of views,   incrementally.  
+
+And so what that means,   I guess, to   just kind of give one example is   if you give us, for example, a join and you say, please maintain this inner join for me incrementally,   the   the plan to make that join   be kept up to date incrementally is significantly more complicated. And we do a process that,   of algebraically   rewriting the query plan   so that, you know, if if one side of the join plate changes, we'll, like, look up those changes against the other side of the join. And if the other side of the join changes, we'll look up the changes against the left side, and then we'll kind of apply those changes on top of the data that's stored in the dynamic table. And I say this as, like, the actions that we'll do, but what that will really do is produce a plan, which we then hand off to Snowflake's existing execution engine,   and it'll just kind of do all that for us. And so we've been able to do all of this with a relatively small team   and just, like, have it be part of Snowflake.  
+
+
+
+[00:24:39] Tobias Macey:
+
+And so as far as the   workflow that that enables, I'm wondering if you can talk to some of the ways that teams are applying this dynamic table capability   and maybe some of the   approaches that have been   replaced as a result of having that as an option where maybe they used   to have to do a DBT incremental load, but they can actually just handle staging all the raw data or landing all of the raw data in an s three bucket via Kafka or etcetera, and then,   Snowflake can take over the rest just by virtue of having that materialized representation of that source data?  
+
+[00:25:22] Dan Sotolongo:
+
+Yeah. Yeah. So there's there's a few different aspects of of this problem   that are kind of solved by preexisting tools. Like, DBT is a good one to focus on because most people will know what DBT is. I guess,   it, in short,   it's, I guess, it's a a nice Python library that lets you,   write SQL queries   in Jinja templated form, and it will kind of execute them,   this graph for you. So you can kind of, like, build your pipeline out of this this SQL. But the really important features, I would argue, for that DBT has is it has opinionation on your developer workflow. Right? It lets you organize your files together. It lets you templatize them so that you can test them, and you can instantiate them in different environments.   And then there's this other half of its functionality, which I consider it's not developer time functionality. It's like runtime functionality where it'll, like, actually invoke your,   your DMLs to do the refreshes for you. And very often, people will, like, have their dbt   inside of either dbt cloud or inside of an airflow, or they'll they'll be invoking it from somewhere. Right? And so what dynamic tables does is it doesn't we we haven't really tried to address the developer   workflow half of that problem at all. It focuses purely on   when like, orchestrating the workload for you, which is, like, when do these refreshes need to run, and then automatically incrementalizing   things for you. So you don't have to figure out what an incremental materialization is or,   what do they call it? Micro batch materializations? I can't remember. They have a new one that seems to be pretty popular.  
+
+But dynamic tables kind of takes care of those two problems and then kind of lets you bring whatever developer workflow you want to the table.  
+
+[00:27:03] Tobias Macey:
+
+Once you have a   dynamic table   as part of your overall   analytical suite,   what are some of the other ways that that changes some of the   access patterns or data modeling approaches that teams might have typically used to address some of those   complexities   of constantly updating data?   Maybe there's no longer a need to do a lot of complicated   logic or joins   within the staging layer, or maybe it changes the way that they think about the overall dimensional schema that they might use for their core warehouse layer. I'm just curious how that has impacted the   patterns that teams build on top of.  
+
+
+
+[00:27:48] Dan Sotolongo:
+
+Yeah. That's a good question. I think   the hope is that it   well,   I was gonna say the hope is that it doesn't change what you're trying to build in the first place. Maybe, I guess, the probably the biggest change from that perspective is it makes it much easier to build things that you wouldn't have built otherwise.   But in terms of, like, you know, I want my dimensional schema. I want this warehouse kind of configuration. I want a data vault or something like that. The idea is to just be let let you do what you wanna do,   but make it easier.  
+
+The the kind of key differences are like I said, it makes it easier to do it, hopefully. So you can just, like, create these and then just let them go. Right? Put them in a a dedicated   warehouse. I guess, warehouse here in in this context, I mean, a snowflake warehouse, which is basically a pool of resources. Right? So you give it a pool of resources and just let it go.  
+
+[00:28:35] Tobias Macey:
+
+And so having this capability   of managing the incremental updates, handling   the complexities   of ensuring that the different data sources are aligning in terms of the delivery cycles,   it still doesn't address the other end of the problem of managing that input layer of how does the data even get to Snowflake for it to be able to do that incremental processing.   And I'm wondering if you can talk to some of the ways that you're thinking about the   automatics. Maybe it's an append only log or, in particular, being able to handle things like deletions or updates as you are doing that processing and just some of the   structural   patterns   around this   unbounded data and how it lands in the context of Snowflake for it to be able to be then be fed into these dynamic tables.  
+
+
+
+[00:29:28] Dan Sotolongo:
+
+Yeah. Yeah. Yeah. So there are two aspects of this that I think are worth treating separately. The first one is the the integration challenge. Like,   dynamic tables all lives entirely within Snowflake. So, like, how how do you get your data out of Salesforce or whatever, right, in the first place? And that's kind of like the connectors land. And there's no I guess, I haven't seen a unified magical solution that just, like, lets you do that. I feel like it's just   a a matter of   engineering and working through all the different ways that systems let you get data out of them. But there is an interesting   kind of new angle on this, which is iceberg,   I guess, and more generally, like, standard data table formats. Right? Snowflake cares a lot about iceberg in particular, but, you know, there's also Delta and Hudi and   probably a few others that are less popular.  
+
+But the basic ideas there   is if you can   get everyone to agree on a unified table format, then everyone can export to that, and then everyone can read from that. And so Snowflake has been investing very heavily in Iceberg, and part of that investment has involved supporting dynamic tables that read from Iceberg.   And so if you have you know, you opt into this kind of iceberg   way this iceberg   perspective on the world, then you more or less sidestep the data integration problem, and you just use the iceberg table as your source. And you can even make dynamic tables be stored as iceberg. And so you can kind of use Iceberg as your input and your output format and kind of do all your transformation in Snowflake, but make that transformation visible to anyone outside of it. But then there's the the second half that you mentioned of, like, what about the semantics? Like, what if your data actually needs to disappear? What if you have GDPR constraints and you need to delete stuff after some time, but you still want, like, your your statistics. Right? Like, the   there's a very real problem with a materialized view where if you did,   a monthly aggregate and you delete the data for that month a year later, it just disappears   from your materialized view. And so that's where, like I said, view semantics doesn't help you with that, but it's a very important problem. And so it's something that we are currently in the process of proposing,   extensions   to the I guess, we announced these features in June. We call the it's like a suite of features that we call immutability.  
+
+And the basic idea is   you kind of start with view semantics at the core, and then you put a layer on top which says,   make this portion of the table immutable.   And, like, you can freeze it, I guess. And that the region that is frozen can kind of grow over time,   and you can kind of, like, lock it in in place. And what that ends up doing is it divides your dynamic table in two where there's the immutable region, which   is basically just a table. Like, it it originally   kind of derived from some source data, but it stopped you kind of broke that that coupling at some point, and now it's just data. And then there's the other portion of your dynamic table, which is the view semantic portion, and that keeps getting refreshed   for you. And that unlocks the ability to do things like control over your backfill. It lets you migrate pipelines from tables into dynamic tables. It also eventually lets you do,   things like watermarks,   ins that you do in stream processing. You can have control over which results you want to see and which results are now immutable or final. And so the we think that that's kind of, like, the next big step to go beyond view semantics,   but we're still in a preview state with that. So I don't have, like, a full description and documentation that I can point to people.  
+
+
+
+[00:32:59] Tobias Macey:
+
+And then another element   of the overall problem space is once you have landed all of your data, you've defined the view structure that you want to see and keep it up to date is the   problem of continuous data validation as the view gets updated and you want to make sure that there are no   violations of the semantic expectations that you have of the data, whether that's because bad data happened to get loaded in or   maybe   there was a modification   that doesn't match what your expectations were, but you actually want to keep it to some of the challenges around   doing that validation and testing and evolution   of that view as the business evolves.  
+
+
+
+[00:33:43] Dan Sotolongo:
+
+Yeah. Yeah. And, you know, having this validation in place is really important to make sure that you have actually good results in your pipeline that's just, like, staying up to date for you. Right?   The so the the way that,   I guess, people model this traditionally in a batch system   is you run a batch, then you do some validation on that batch. And then if that passes, then you kind of, like, proceed either down the DAG or to the next batch. And if it doesn't, then you alert someone. Right? In streaming,   things have always been much more   complicated, I guess. There there is this concept of a dead letter queue where which tends to only really apply on a per event per row basis. Like, oh, I tried to parse this thing, and I thought it was a credit card number, but it has a letter. So I don't know. Just put it somewhere else, and I'll deal with it later. Right?  
+
+And I think bridging these two is a real challenge, like, a real design challenge. The approach that Snowflake is taking   is to start with monitoring.   We have   a construct called a data metric function,   which you can put on a a regular table or a dynamic table. And what that does is it runs some function over your table,   periodically and exports the result into an event table, which is kind of Snowflake's telemetry   object.   And then you can kind of set alerts on that and say, like, oh, if my,   left join, which I really should be an inner join, but I'm doing a left join just to make sure that I don't lose any rows. And if there's a null, that's actually a really bad sign. So I'm asserting that this column is never null. Right? Then you can have an alert like, oh, this column is null. You should do something about this. Kind of the next step beyond that is intervention. Like, before any of this bad data gets into the system, just, like, stop it or set it aside, put it somewhere else. Right? And that's where we don't currently have any built in capabilities   to make that first class, but you can I guess, the the starting point is having the ability to do that, and you can build that logic into your dynamic tables already? You can have a dynamic table that kind of filters out the the bad rows and only has bad rows. And if that table is not empty, then you know there's a problem, and you have the data right there.  
+
+There's kind of like a whole I don't know. It's a very complex service area. So, like, integrating with tools like dbt   is something that,   already works but could be better. And so I think this data testing story is something that's gonna kinda keep evolving over time.  
+
+[00:36:02] Tobias Macey:
+
+Now that you have this more generalized   framework for how to think about and talk about this   use case of   continually   incremental updated views   based on the changes to the source data.   What are some of the ways that you think that other database engines   could potentially implement that same style of capability,   and what are some of the   core primitives that would need to be in place before that work could really be feasible?  
+
+[00:36:39] Dan Sotolongo:
+
+So I guess,   like, the the general approach that I described of, like, if you have a database, you you probably if you have a SQL database, you definitely have a compiler and an executor, and you have some metadata. Right? And so at the very least, it's, like, not too big of a lift to implement some kind of incremental view maintenance.   And I think, like, for example, the PGIVM   extension   is basically that. If you have some way of scheduling work in the background, same thing applies. Right? Like, you can automate the execution of those those refreshes.   I think the interesting   questions come in   kind of at the next level down, which is,   one really important question is,   usually, you want some kind of isolation between your workloads. Right? Like, the these kind of asynchronous delayed workloads,   usually, you want   to keep them off to the side from your interactive transactional workloads because if suddenly you do too much work, you don't want your serving layer to go down. Right? And so depending on the architecture of your database, this might be easier or harder. If it's if it all runs on a single node, it tends to be pretty hard. If it's kind of like one of these cloud,   oriented   systems where you have the ability to kind of spin up, clusters on demand and for specific workloads, then that's much easier. And Snowflake was kind of one of the pioneers in this area, so we rely heavily on that to isolate workloads.  
+
+Another interesting,   kind of complication is which indexing data structures do you have available to you? I mentioned earlier that if you wanna do a join incrementally   at, I guess, with with relatively small batches, you really badly need an index. And so depending on do you have a b tree? Do you have   a sea of parquet files with no metadata on them? That incremental join could look fairly cheap or could look like a full table scan every time.  
+
+[00:38:27] Tobias Macey:
+
+And as you have been working through   the implementation   of dynamic tables and the formulation   of the delayed view semantics   framework, what are some of the ways that the   your perception and understanding of the problem space has evolved over that period?  
+
+[00:38:47] Dan Sotolongo:
+
+Yeah. Yeah. I really like this question.   I feel like the general premise has held pretty true.   The the the premise being incremental view maintenance is,   like, a really clean, elegant way of thinking about kind of continuous data processing. And, also, like, I think   anyone who really thought about it knew immediately, like, that's not enough. You need other things. Right? So those basic things have held up. What's been interesting to realize is,   I guess, how much of a gap there is between thinking   in terms of view semantics and kind of the imperative   batch oriented pipeline thinking that people had been implementing until now.  
+
+Like, it early on in the dynamic tables release,   very often, like, it was hard to get people to wrap their heads around. Like, no. It's it's just the result of this query. Like, if you ran this query, you'll get a result. And if you put it in the dynamic table, you'll get the same result. Right?   And so   that was an interesting   kind of thing to get over. I think, at this point, we've seemed to have overcome the hurdle. I don't know if that's just Snowflake specific perspective. Maybe our our sales team has gotten really good at explaining it. I guess another thing that's been surprising is   how often people compromise on correctness   in order to, like, get done what they need to get done. Like, if if you do, for example, an incremental materialization in DBT,   you're not really doing   pure, proper,   self consistent,   incremental view maintenance. You're doing some facsimile of it that depends on a whole bunch of assumptions on your source data. And if you try to implement proper view maintenance on it, you're actually doing a completely different thing that might be much more expensive.  
+
+But it turns out   when faced with that decision, people want the cheap thing that is just approximately correct. And so I think it's   even going beyond the there are things that Vue semantics can't express, it's   realizing that those things that Vue semantics can't express are people that are things that people really, really need and really, really care about, and staying kind of in the pure   abstract model,   doesn't actually get you there.  
+
+[00:40:52] Tobias Macey:
+
+As you have been   building and evolving the dynamic tables functionality   at Snowflake   and evolving the framework   for how to   describe and talk about it in the absence of the technical representation?   What are some of the most interesting or innovative or unexpected ways that you have seen that feature set applied?  
+
+[00:41:13] Dan Sotolongo:
+
+Yeah. I think   what's been   especially interesting has been to see people mix and match Snowflake features. I guess, you know, from the perspective of dynamic tables,   like, very early on like, from from the start, dynamic tables were just a regular schema object that had regular RBAC. We supported   replication very early on in the life cycle.   And we oh, we also supported column   masking policies and row access policies.   And, you know, these are,   like, relatively   common features in databases, but extremely uncommon features in, streaming systems. But they ended up being because we were so close to the database,   they ended up being, like, basically,   like, table stakes features for a lot of customers.  
+
+But what's been interesting is to see   how that manifests in the use cases. Like, we we have   customers that   that they stamp out thousands of instances of   approximately the same pipeline,   over and over and over again. And so they end up needing to manage, like, 100,000   dynamic tables in a single account. We have other customers who,   I guess, durability and disaster recovery are really important requirements for them. So they will replicate their entire dynamic tables pipeline into another Snowflake deployment, and they expect it to just kind of work. Like, if they do the failover, the the pipeline should just keep working, and it should read from the, the source data in that other deployment.   Another another instance of this is Iceberg that I mentioned, like, letting people read and write to read and write from and to Iceberg   has made it, like, really easy for people to just, like, kind of   work in their data lake   more easily than they would have using other tools that are kind of harder to pick up than Snowflake.  
+
+
+
+[00:42:54] Tobias Macey:
+
+And as you have been   building out the technical   functionality   and exploring   the   overall problem space   of dynamic tables and delayed view semantics, what are some of the most interesting or unexpected or challenging  
+
+[00:43:09] Dan Sotolongo:
+
+lessons that you learned in the process? I guess one   one thing is   how hard it is to actually get the right result,   when you're building infrastructure   that's supposed to compute something.   I think,   like,   a lot of the time   when you're building a system, you you actually have no way of determining whether or not you have the right result. Like,   you kind of like, if if your system computes something, then in order to check if that's correct, you need to compute it some other way. Right? And a lot of time, you you just don't have another way. Right? But the nice thing about view semantics is you do have another way. Right? You you have the view that you can run, and you have the dynamic table that should produce exactly the same result, assuming they kind of start with the same underlying timestamp.   And so we actually have taken this very seriously   where we basically built in,   runtime asserts into every single dynamic table refresh   that, it's not 100% coverage, but it's quite good coverage that,   our incrementalization   didn't do anything wrong. And if it does, it will fail the refresh and send an alert to our team, and somewhat one of us will have to debug things and investigate and figure out what's wrong. And it's been, like, completely fascinating both to see how easy it is for us to get something wrong. Like, I mentioned these algebraic rewrites. Like, if you rewrite an outer join and you forget that this column, if it happened to be nullable, then you need to propagate that nullability or you need to not propagate that nullability. And, like, there's all these, like, really nuanced contracts inside of SQL that are hard to keep track of.  
+
+Oh, one that I learned is, if you do   a scalar aggregate without a group by, you're always guaranteed to get a row even if there's no input.   But if you do a group by, then you might get no rows if there's no input. And so it's little things like this that that can really get you. But by having kind of this property based testing of where we have a system that automatically generates queries, and then it'll make a view, make a dynamic table, compute them on the same time stamp, and compare them. We've been able to catch a ton of our bugs and also a ton of, like, weird random corner case bugs that existed in Snowflake for, like, ten years and nobody had ever caught because they had no way of catching them. It it's definitely interesting  
+
+[00:45:19] Tobias Macey:
+
+both the ways   that long running systems can accrue those types of hidden   problems that aren't that never raised to the level of being caught or addressed,   but are actually problematic   in those weird corner cases. And then also the fact that   SQL   as a language and as a specification   has been around for so long and yet still has so many,   weird and quirky behaviors.  
+
+[00:45:47] Dan Sotolongo:
+
+Yeah. It's funny because, it feel it prob they probably just keeps accruing the weird and quirky behaviors over time even though one would hope that these, like, weird corner case bugs get hammered out over time. So it's it's,   yeah, things are kinda moving in opposite directions.   And the net is we have to keep keep squashing them over time. It it doesn't help that ANSI SQL as a specification  
+
+[00:46:08] Tobias Macey:
+
+is actually more of a recommendation than an actual spec and that   everybody who builds a database ends up evolving the actual SQL semantics to fit their use case in slightly divergent ways. And sometimes that gets folded back into the specification that people can then reinterpret in their own manner.  
+
+[00:46:25] Dan Sotolongo:
+
+Yeah. Yeah. Actually, not it's funny you mentioned that because there was, like, a subcommittee of   the SQL standardization committee that was focused on standardizing   streaming SQL.   This this subcommittee ran from, like, 2021 to 2023.   And I was on it. I ended up chairing it by the end,   but it was so hard to get any consensus because everyone just had their own, like, oh, here's my extension, and here's what it does. And, like, here's my extension. And, obviously, we had our own extension, but we hadn't actually even implemented our extension. And And so we ended up having to put a pause on that effort because   we need, at least, like, some solution to become, like, the obvious thing before we try to make it a standard.  
+
+
+
+[00:47:07] Tobias Macey:
+
+Design by committee is always an interesting problem.   Yeah.   And so for people who are   working on this problem space of trying to do a continually updated   view over some set of source data, what are the cases where dynamic tables and or the delayed view semantics   theoretical framework are the wrong approach?  
+
+[00:47:31] Dan Sotolongo:
+
+So   right now,   I I guess,   speaking specific okay. So delayed view semantics, I think I already spoke to that. Right? Like, we there are cases where you just can't use view semantics.   We we have our guess, our our take on what those extensions should look like, but there are other things out there, right, that that can try to do that.   In terms of what dynamic tables themselves can and cannot do,   I guess so we are definitely focused on the analytical use case. We're not focused on on transactions and kind of interactive serving.   As well, I mentioned that our architecture is focused on higher latencies. Like, we we've,   just went into a preview with fifteen second lag for dynamic tables,   but, you know, there are systems that are optimized for hundred millisecond lag. Right? And and dynamic tables just aren't optimized that way right now. You could see a future. The I guess the nice thing about the the programming model is you can swap out implementations under the covers, and so that's not necessarily a future we won't head toward.  
+
+But right now, true low latency streaming is is not what dynamic tables is for. It's more about   doing   reasonable or, I guess, like, I would say, like, typical latencies   that are really easy to do, directly inside of your data warehouse.  
+
+[00:48:42] Tobias Macey:
+
+And as you continue to build and iterate on the dynamic tables functionality,   as you continue to think about what that specification   for streaming SQL should look like, and as you continue to popularize this idea of delayed view semantics, what are some of the things you have planned for the near to medium term or any particular projects or problem areas you're excited to explore?  
+
+[00:49:04] Dan Sotolongo:
+
+Yeah. So,   a few I guess the the area I'm most excited about right now is immutability.   We have a couple of features in private preview right now that we'll be launching to GA, I think, at the end of this month. And so we'll be, you know, posting about blogs, but I I think that that really kind of   expands the addressable market of dynamic tables massively,   because suddenly you you're not constrained to what you can do within a view.   But we're also doing a whole bunch of other things.   Like, we're   significantly,   improving our optimizer and our incrementalization   engine,   to be able to handle kind of more complex,   queries and break them down into pieces and build indexes and kind   of do do a a more sophisticated set of things that are more in line with, like, what a very mature database can do rather than, like, a a scrappy project that is just a couple years old. Right? We're also kind of continuing to build out new features.  
+
+Iceberg integration is a really important one. I we already have support basic support for Iceberg,   but Iceberg is moving really fast. The b three spec came out a few months ago, and so we're racing to   reach,   like, what is it, conformance with the v three spec both on read side and write side. And it'll actually be pretty exciting because the v three spec has something called row lineage, which makes it much cheaper   and actually possible   to,   do CDC on an iceberg table. And so, our team actually drove a lot of the standardization of the row lineage spec, and we're gonna be implementing it in Snowflake as well.  
+
+[00:50:34] Tobias Macey:
+
+Are there any other aspects of the dynamic tables implementation   and the overall   work that you've done around the delayed view semantics framework that we didn't discuss yet that you'd like to cover before we close out the show?  
+
+[00:50:47] Dan Sotolongo:
+
+No. Not really. I'm I'm just pretty excited because it feels like we're finally getting to the place where stream processing is, like   it's like a mature discipline where we've actually explored a fair bit of the problem space, and we have a lot of good solutions. And, hopefully, we're reaching a place where we have a common language to talk about all the solutions as well.   And so I think we'll be it'll be really interesting to see which problems crop up once we're on the other side of those.  
+
+[00:51:11] Tobias Macey:
+
+Absolutely. Yeah. I can definitely recall in the   early to mid twenty tens when stream processing   was first starting to become in vogue with things like Storm and,   Samza and the early days of Flink, and everybody was doing their own thing. Everybody had different approaches to how to think about it. And now I think, as you said, we've hit a point of   maturity both in terms of the operational capabilities as well as the   ecosystems   understanding   of what are the actual technical   problems to be solved and how to address them so that I I think that we can start to reach that next level of capability and therefore enable broader adoption without it just being the   most technically advanced teams who have the capacity to even conceive of adopting stream processing.  
+
+
+
+[00:52:03] Dan Sotolongo:
+
+Yeah. Yeah. Totally agree. I mean, that that's ultimately the hope. Right? Like, I think the the way I phrased it when we were first starting the dynamic tables project is our goal is to make the streaming paradigm easier to use than the batch paradigm. Right? And, you know, if if people are building twelve hour freshness pipelines out of dynamic tables, you'll know that we've won or we're doing that. Right?   So I think we're really on the right track.  
+
+[00:52:27] Tobias Macey:
+
+Alright. Well, for anybody who wants to get in touch with you and follow along with the work that you're doing, I'll have you add your preferred contact information to the show notes. And as the final question, I'd like to get your perspective on what you see as being the biggest gap of the tooling or technology that's available for data management today.  
+
+[00:52:42] Dan Sotolongo:
+
+I think   what it comes down to is   sprawl.   I think   there's just so many tools out there, and you kind of like, they're necessary tools a lot of the time. Right? Like, most customers that we work with have   well, they'll they'll have their transactional database.   They they might have their,   Spark pipeline. They'll have their Snowflake. They'll have their Prometheus.   That you know, there's so many thing. They'll they might have their search index, and there's so many kind of purpose built tools   that each do kind of a specific thing, and they do it well, certainly, by now.   But if you if you look under the covers, like, as an infrastructure engineer,   it's kind of infuriating to realize that all they're doing is mix and matching the same things over and over again in slightly different ways. And I feel like the the biggest gap that I see is,   like, a more a cleaner, more unified way to mix and match those kind of core primitives that are underlying all of these technologies   so that we can   reconsolidate all the sprawl and the mess that we've gotten into,   the wiring of dozens of different systems just to get your basic website working. It would be magical to reach that point.  
+
+And, well, I I hope that we can hit it in the next few years.  
+
+[00:53:54] Tobias Macey:
+
+Absolutely.   Well, thank you very much for taking the time today to join me and share the work that you've been doing on the dynamic tables feature at Snowflake and the formalization   of the delayed view semantics framework. It's definitely a very interesting problem area and interesting approach to a very real technical problem that people are addressing. So I appreciate the time and energy that you're putting into that, and I hope you enjoy the rest of your day. Thanks a lot, Tobias. You too.   Thank you for listening, and don't forget to check out our other shows. Podcast.net   covers the Python language, its community, and the innovative ways it is being used, and the AI Engineering Podcast is your guide to the fast moving world of building AI systems.  

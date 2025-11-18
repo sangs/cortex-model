@@ -1,0 +1,410 @@
+Summary
+In this episode of the Data Engineering Podcast Hannes Mühleisen and Mark Raasveldt, the creators of DuckDB, share their work on Duck Lake, a new entrant in the open lakehouse ecosystem. They discuss how Duck Lake, is focused on simplicity, flexibility, and offers a unified catalog and table format compared to other lakehouse formats like Iceberg and Delta. Hannes and Mark share insights into how Duck Lake revolutionizes data architecture by enabling local-first data processing, simplifying deployment of lakehouse solutions, and offering benefits such as encryption features, data inlining, and integration with existing ecosystems.
+
+[00:00:11] Tobias Macey:
+
+Hello, and welcome to the Data Engineering podcast, the show about modern data management.   Data teams everywhere face the same problem. They're forcing ML models, streaming data, and real time processing through orchestration tools built for simple ETL.   The result, inflexible infrastructure that can't adapt to different workloads.   That's why Cash App and Cisco rely on Prefect.   Cash App's fraud detection team got what they needed, flexible compute options, isolated environments for custom packages, and seamless data exchange between workflows.   Each model runs on the right infrastructure, whether that's high memory machines or distributed compute.  
+
+Orchestration is the foundation that determines whether your data team ships or struggles.   ETL, ML model training, AI engineering, streaming, Prefect runs it all from ingestion to activation in one platform.   Whoop and 1Password also trust Prefect for their data operations.   If these industry leaders use Prefect for critical workloads, see what it can do for you at dataengineeringpodcast.com/prefect.   Are you tired of data migrations that drag on for months or even years? What if I told you there's a way to cut that timeline by up to a factor of six while guaranteeing accuracy?   DataFold's migration agent is the only AI powered solution that doesn't just translate your code. It validates every single data point to ensure a perfect parity between your old and new systems.  
+
+Whether you're moving from Oracle to Snowflake, migrating stored procedures to dbt, or handling complex multisystem migrations, they deliver production ready code with a guaranteed time line and fixed price.   Stop burning budget on endless consulting hours. Visit dataengineeringpodcast.com/datafold   to book a demo and see how they turn months long migration nightmares into week long success stories.   Your host is Tobias Macey, and today I'm interviewing Hannes and Mike Roswell about Duck Lake, the latest entrant into the open lakehouse ecosystem. So, Hannes, welcome back. Can you just start by giving a brief introduction?Mühleisen and Mark Raasveldt about Duck Lake, the latest entrant into the open lakehouse ecosystem. So, Hannes, welcome back. Can you just start by giving a brief introduction?  
+
+[00:02:07] Hannes Mühleisen:
+
+Yes. Certainly. Thanks for having me back. Pleasure to be back. Yeah. My name is Hannes. Yeah. I'm many things, but I'm one of the people,   behind, DuckDB and more recently DuckLake.   Started together with Mark the project   DuckDB project   seven, eight years ago, something like that, and we're still at it. People tell you databases take ten years, and they might be   right. And these days, I am leading DuckDB Labs, the company behind the DuckDB project.  
+
+[00:02:35] Tobias Macey:
+
+And, Mark, welcome to the show. Can you give a brief introduction as well?  
+
+[00:02:39] Mark Raasveldt:
+
+Yeah. Thanks for having me. It's it's a great honor to be here. So I'm Mark. I'm the currently the CTO of DuckDB Labs. So,   doing the well, we're all technical. We're both technical, of course, but doing all the,   a lot of the programming, pull request reviewing   behind DuckDB. And, yeah, we started DuckDeebee   seven years ago, I wanna say. It's in 2018, I believe. Or maybe it was 2017, actually. It's it's a think. '18. It it it it's funny the way, like, after a certain period of time, you can't recall the exact year anymore.   Yeah. Me and Hana started it during my PhD where Hana was my de facto PhD supervisor.  
+
+And we we we build it up. And now we're we're looking to to revolutionize   the lakehouse space as we did with the database space. I think that's fair to say.  
+
+[00:03:28] Tobias Macey:
+
+And so, Hannes, do you remember how you first got started working in the area of data?  
+
+[00:03:34] Hannes Mühleisen:
+
+Yeah. I do remember.   This has been a while. Way back when I was a 16 year old PHP programmer that had to to store some data, and then people told me you needed you need to talk to something called MySQL.   And I had no idea what it was, and I didn't know what it meant. And, but I sort of, you know, started sort of mucking around with it. And at some point, I realized that this SQL part was actually more interesting than the PHP part. And I've you know, I went I went on sort of the classical   thing where I studied CS, computer science,   get my PhD in computer science, and then worked as a postdoc at a database research group here in Amsterdam.  
+
+So it's been a while, but somehow I'm still obsessed with tables after all these years.  
+
+[00:04:16] Tobias Macey:
+
+And, Mark, do you remember how you got started working in data?  
+
+[00:04:19] Mark Raasveldt:
+
+Oh, well, actually, because of HONOS. So I was following at my university. I was doing a master's,   in computer science,   and I was taking a database course. It was the I forgot the exact name. It was the the the master's, like, advanced database management course. And at some point, they had a guest speaker,   a certain showed up from the,   center of math and computer science, this CWI, where he presented the database system that they were working on at that point of.   And I thought, oh, I I never really thought about   the like, of course, I knew how   SQL worked, like, what a database was, but I'd never really thought about the concept of creating a database, like, the the back end. And I was like, that sounds super interesting.  
+
+So I reached out to Hannes, and I went, I asked him, like, could I do a master's project there? And I I did, and I had a great time doing it and kinda just stuck around. So after that, I did my PhD there, postdoc, and now   we're we're we're running a company together. So  
+
+[00:05:20] Tobias Macey:
+
+And so   DuckDV,   as you've pointed out, has been in the works for a long time. It has grown to be massively popular, used all over the place.   So I'm not gonna dig too much into that, and we actually did a previous episode about DuckDV   specifically, so I'll link that in the show notes. But most recently, you've introduced this idea of DuckLake, which was a bit of a shot across the bow to the whole lakehouse ecosystem, which has been investing a lot into   Iceberg.   And, obviously,   the Databricks folks have been investing a lot into the Delta format. And then there's Hudi, and I'm sure many others that I   am leaving by the wayside. Also, interestingly, there's the Lance table format focused on vector indices.  
+
+And so given the breadth and variety of the ecosystem,   I'm wondering if you can just give your summary of what is Duck Lake and why.  
+
+[00:06:17] Hannes Mühleisen:
+
+Yeah. Happy to. So I think what Duck Lake is, it's a sort of a reimagination of lakehouse formats.   And it came from   basically us   looking at the the lakehouse stack as it evolved over time,   because it started with something where it was strictly file based.   If you remember, you know, iceberg v one. And to include the at some point, it suddenly got this gained distress catalog and a similar development also happened over in in Deltaland.   And we just looked at that stack at some point because we are obviously the people that have to implement this in the end because people kept asking us to make support for these things in DuckDB. So we kind of were forced to look at this at a very technical   architectural level and at some point thought, hey. Hang   on. There is this catalog up there that has a database. Maybe you should use this for all. And so what DuckDuty is is a unified catalog and table format that basically   uses a SQL relational database for all the metadata management and sort of standard blob store object store for the actual data and delete files, which is cutting a lot of complexity out of, let's say, the stack, greatly simplifying it. And so that's kind of, I think, how we got there with   this. You're just looking at what what is the tech stack of the existing solutions   and then   applying maybe critical thinking to it and then ending up with a a a different solution that is stuck. Like, is that fair to say, Mark?  
+
+
+
+[00:07:41] Mark Raasveldt:
+
+Yeah. That that's exactly it. Like, we were a lot of people asked for support for these lake house   formats. And I think at at its core, they are cool ideas. Like, iceberg is a is a great idea. Delta is a great idea. Like, it's it's very nice to put structure on top of a bunch of parquet files. And they have a lot of really cool properties like acid,   amazing. We're big fans of assets, the database principle that is. And,   like, they have a lot of cool stuff that solves a lot of very real problems that people ran into with just using   effectively a bunch of parquet files on s three or your favorite blob store. Right? So at its core, they're really nice. Like, it's it's it's a cool technology.  
+
+What got us hung up on them was basically the added complexity   that was there when you were using them. And I think that you may think as a user, oh, I don't necessarily need to deal with that. Right? It's my database vendor that needs to deal with it, but that's not exactly true. Like, there's a lot that bleeds through that I think as a result of the underlying complexity   behind the, like, the iceberg format,   as a user, you will face a lot of these challenges as well. And there's also a lot of limitations that arise from that. And so we were basically like, we were thinking, okay. How can we make this a more pleasant experience? So that's one of the things we always try to do is from a user perspective. How can we make it nicer to use? How can we make it more streamlined, more smoother so that it's easier, so that you you need to deal with less like, juggle less stuff? Right? That's one of our core sort of ideas behind DuckDuty itself and also behind DuckDuty. How can we make it easier to use while still keeping all the cool stuff that iceberg and Delta that they revolutionized essentially over just having a bunch of parquet falls on this three.  
+
+[00:09:30] Tobias Macey:
+
+And another interesting   aspect of what you're doing with Duck Lake is that DuckDB   was very popular. It's very fast, easy to use, easy to get started with, but then people started saying, okay. This is great for single player mode. How do I make it multiplayer?   The folks at Motherduck did a good job of addressing that in terms of being able to take the principles of DuckDB and the interface for it, but scale that up to a warehouse   size   utility.   And I'm wondering now that you're introducing Duck Lake, how that compares to the ways that the mother duck folks are thinking about their utility and what you're doing with Duck Lake and what that Venn diagram looks like.  
+
+[00:10:11] Hannes Mühleisen:
+
+Yeah. That's an excellent question. Because   as you said, I think what we what we discovered with DuckDV is that at some point, we declared a single player mode sort of that we've wanted on a hard. Right? Like, you can you can put terabytes   of of data on a laptop and query it with dark to be no problem. Right? Like, that that's that's pretty that's pretty crazy. In fact, I think I still can't really believe it sometimes. Right? But we, as you said, we never had a really good multiplayer story. It was like, yeah, you need to, I don't know, copy this file around or I don't know. And so that indeed is also what's one of the main reasons we we we came up with DuckDuty. It's like, what would be the multiplayer mode in kind of DuckDuty style? Like, Mark said, you know, with with simplicity, ease of use, these kind of things. I think Motherduck is   also doing that. They've also just launched a Duckleg product in case you in case you haven't seen it. I'm not not I don't work for Motherduck, but   I just want to point it out. I think the difference is that mother duck is   running compute for you, and that's kind of what they do. Right? And a duck lake is something where you run compute yourself or you can run compute yourself. Right? You're running bunch of nodes. Could even run this on your on your customer's iPhones if you wanted to. And there is a centralized metadata server that could be a hosted solution. I mean, I can also see that one coming, at some point. But it is more the computer is more on your side of the fence. And with mother duck, the the computer is more on their side of the fence where they're running VMs. They're doing stuff that might be duck like stuff, but in the end, it's still under their control. Right? You know? Which is some some people prefer having a sort of here's my credit card solution,   and some people   prefer a building a custom solution. And so I think this is how these things are different.  
+
+
+
+[00:11:56] Mark Raasveldt:
+
+Yeah. Duck Lake is much more of a storage solution. Like, here's how you can share data across,   nodes using Pure DuckDV. And as mentioned, it integrates actually quite nicely with Motherduck because   if you want to use Motherduck   with open table formats or like parquet files essentially, right, so that you can maybe also use other services. Like, there's a lot of reasons for a user to want to use parquet files because it allows you this interoperability between different tools. Maybe not every tool has all the solutions   that's, you may wanna grab a different tool from time to time. So there's a lot of value to having a bunch of parquet files as your data store. And Duck Lake essentially enables also Mother Duck to offer   that as an experience for users. So in some sense, it's also good for them, and they are offering this as a product as well.  
+
+
+
+[00:12:46] Tobias Macey:
+
+I think one of the most interesting aspects   of what you're doing with Duck Lake is that   it changes some of the calculus around the broader ecosystem   where, as you said, Iceberg is already supported within Duck DB. So people who are in the Duck DB ecosystem   can interoperate with Iceberg tables as well as their own local files   and the various other extensions that Duck DB supports.   Iceberg and Delta have a massive ecosystem that they have grown up and invested in with multiple different engines that are compatible with those formats, including   some of the vendors like Snowflake and Databricks adopting support for Iceberg. One of the   main   driving factors for things like Iceberg and Delta was that they were a means of being able to apply these   large scale out compute stacks to these large datasets,   thinking things like Trino and Presto and Spark. And   so there's an interesting overlap there as well between that big data ecosystem   and the   analyst   single player mode. I just wanna do things fast and easy with DuckDV ecosystem. I'm wondering how you're thinking about the particular personas that are best served by Duck Lake and how you're thinking about its role within that broader ecosystem.  
+
+
+
+[00:14:08] Hannes Mühleisen:
+
+I think that's that's a great question. I think that the way we built Ducklake is that it actually,   it scales in kind of deployment   footprint. Right? So you can make a tiny Ducklake instance.   It's actually quite easy. It's like you install duck lake and you say,   attach duck lake so and so, and it just runs. Right? Like, there's it it's like a single line in in duck DB.   And on the other hand, you can   have a gigantic duck lake setup where you have thousands of compute nodes. You have a gigantic metadata server, you have a gigantic s three bucket or some other storage system, and and and things in between. Right? So you can and I think what is interesting about duck like is that its its deployment weight goes basically as big as you as you want   and as small as you want. And that's, I think, something we've seen that's maybe not as pronounced with other with the other approaches where, like, the tech stack to run your own, let's say, for example, Iceberg installation is is quite heavy, actually.  
+
+And so you wouldn't be able to just stand it up locally for, like, in in a couple of milliseconds. That's just not gonna happen. Right? So that's one aspect of Duck Lake there. I think the other, aspect of is that I think is also interesting is, like, that we actually thought about. Like, let's say you wanna throw a spark at at a duck lake instance. Right? What that'd be looking like? And we actually did a demo that's, like, I don't know, 50 lines of Python code to make a scale out querying   from spark on top of a duck lake work. Right? It's actually quite funny because we abused the what is that? The parallel   partitioned JDBC reader for it because   DuckDV can pretend to be a JDBC server inside. Anyways, it's it's it's quite funny to see that solution. But the result is that you can basically have a Spark running   a time scale out query on top of a duck leg instance. You can also do something   orthogonal to it and say, I'm gonna run a thousand nodes that each run a single or a different query on the same duck leg at the same time. That also works. Right? So you have I think you have a lot of sort of possibilities there, and duck leg as a concept doesn't really, I think, bind you to one specific way of doing things. And I think that's something that we really like as as an architecture. Right? Is that you can say, what do I need? Yes. I need this and this. It it does make things a little bit harder for our DevRel team that ask, you know, what on earth is this for? What on earth is this useful for? And we say, anything really? It doesn't really help. But, but I think there's a ton of flexibility there, and I think that's we've seen a lot of appreciation over the, last couple of months.  
+
+
+
+[00:16:37] Mark Raasveldt:
+
+And I think in particular,   what I would say is a good use case for Duck Lake as opposed to,   the traditional   stack of lake house formats   is that because it is so much easier to set up and use, if you as a company wanna set up your own stack for this, I think it's gonna be much easier to use Duck Lake than to set up all this infrastructure on Iceberg. So I think if you're using like, if you're a Snowflake customer, right, they have loads of engineers. They're very smart people. They have figured out how to set up Iceberg. It's great. If you wanted them as a user plug into your Snowflake cluster using their Iceberg support, works very well. But once you actually wanna start running this yourself, right, like you don't wanna use Snowflake, but you wanna self host a   lakehouse architecture,   I think that's where the simplicity really kicks in. And I think especially for smaller companies that may not have that big of a footprint,   it makes a lot of sense to go for simpler solutions.  
+
+And what we're trying to do as well is to make sure that it scales up as you go. So that not it it's not just a this is like my prototype stage sort of development, but it's easy to use for your prototype, but it scales up as much as you needed to also as your company grows.  
+
+[00:17:51] Tobias Macey:
+
+On that point of scale, one of the ways that that is addressed is with the horizontal scalability   of I'm going to have one coordinator node that figures out what is my query plan, and then I'm going to farm that out to multiple worker nodes to actually do the data retrieval, push down query processing, figure out which parquet files I need, pull them up, pull the bits of data out that I need, shuffle that all back together, and send it back through the coordinator node. And I know that at least in the case of DuckDV as the client,   you can do some scale out in terms of the available number of CPU cores up to the capacity of the memory of whatever piece of hardware you're using it on, but it's not going to natively scale out across multiple machines. And I'm wondering how you think about that aspect of scalability   versus the scalability   of usage where 15 different people can each run their own DuckDV client, and I don't have to worry about paying for 15 different VMs for x number of hours when somebody might be using it.  
+
+
+
+[00:18:55] Hannes Mühleisen:
+
+Quick objection there. DuckDuty is not limited by the available memory anymore. So that's that's no longer the thing. We are now limited by the available disk space. So that's a much better limitation. But you're absolutely right. And I think at this point, it's important to distinguish   between duck lake, the concept, and duck lake, the extension for duck DB that implements duck lake. Right? Like, these are two different things. They may have the same name and but that's that's just, the way, things are. So I think the duck lake is a concept. It's just, hey. Here, the metadata is all in the SQL database.   Hey. All these files are on s three. Nothing keeps you and I've mentioned it. Nothing keeps you from gluing Spark or Trino or something else to to that concept. Right? And say, look. Instead of reading a bunch of Avro files and JSON files and stuff and rest and whatever,   go ask this SQL database to for,   which files are relevant, you know, which maybe which filter pruning we can do the query planning bit. And then you do your normal Spark or Trino thing for the scale out and what you set for, you know,   pulling stuff from bucket files, shuffling, all that stuff. That's the concept   can do that. Right? There's no there's no technical reason why that can't work. In fact, as I mentioned, we have we have a demo doing this. I see, for example, I would not be surprised if Trina would be adding a capability for Duck Lake in the near future. Right? For example. And at the same time, you also have an implementation   in DuckDB. That is the extension for DuckDB. That is the Duck Lake extension. That doesn't have that. Right? That is but that doesn't change the concept. It just means that if you're running DuckDB, at the moment, you can't do the scale out thing, but you could what you mentioned, for example, run 15 different local instances of it that all talk to the same Duck Lake instance, that's maybe on a on a on a centralized server. And that works perfectly well. So I would say this limitation to scale out that you or this design decision on scale out that I'm that you mentioned, that's on the implementation side currently. That's not on the conceptual side. The concept doesn't care how many nodes you run for a single query. But, indeed, the current implementation in DuckDuty does have a single node limitation. Yes.  
+
+
+
+[00:20:57] Tobias Macey:
+
+I actually well, you were saying that just quickly   looked to see if Trino already has Duck Lake support, and there is an issue for it and,   points to the fact that there is the DuckDB connector, so maybe it already works.  
+
+[00:21:10] Hannes Mühleisen:
+
+It's entirely possible it already works. So, again, we got this to work with Spark with 50 lines of Python. So it's if you want if anybody's interested, I think we have a a blue sky post somewhere.  
+
+[00:21:22] Mark Raasveldt:
+
+So Yeah. I I think that's pointing towards the DuckDV connector. I think that's another interesting   consequence of DuckDV being an in process database is because DuckDuty itself is a library you can embed into a program. You can use DuckDuty as a sort of gateway to DuckDuty through the DuckDuty extension   to make it much easier to do these kind of implementations.   So that's actually   instead of building a dedicated duck click plug in for, say, Spark,   you could also very heavily lean on top of DuckDV's implementation,   which may which makes your   implement actual implementation,   like, maybe a few 100 lines of code. Like, it makes it way, way simpler than if you had to yourself handle all of these complex things. And it's one of the things that we are also thinking about as we're developing   is adding these sort of methods   that allow   partially shifting the work to other engines. So for example, we have the method that allows you to add parquet files directly as opposed to using Ductify to write the parquet files. Then you can write a bunch of parquet files using your engine of choice, be that DuckDuty, be that Spark, be that Trino,   register them using DuckDuty,   and then you don't no longer need to have that sort of native,   like, complex integration   with Intrino directly. You can just lean on DuckDuty's implementation.  
+
+
+
+[00:22:41] Hannes Mühleisen:
+
+But I actually I think that was a bit I think it was a bit of an accidental thing that we realized, hey. This actually works really well. Right? I don't think we actually planned this. It was just like, oh, hang on. We can just use DuckDV   at what you what   you described, Mark. Right? Like, we can just use DuckDV   on, let's say, all of these workers of a scale out solution because it's lightweight enough to basically just run it on all the workers. And presto, we can use these, and and it and it's it's already working. Like, that's funny because I think we have been working with Databricks for a while to work on the Delta kernel project. I don't know if you're aware, but they're building this kind of library that, allows you to interact with Delta tables easier in a in a simpler way because they wrap a lot of the complexity. And we've kind of inadvertently built something similar there because, hey, you can just run DuctDB on these nodes. Right? And that and that works perfectly well because DuctDB is so lightweight. And, yeah, it's just a, you know, JDBC driver or something.  
+
+[00:23:34] Tobias Macey:
+
+And because it also has the integration with the Arrow ecosystem, it makes it very easy for interoperability with that whole suite of tools as well as the fact that you can, either via Arrow or DuckDV,   embed it in something like array cluster or a Dask cluster as well for that horizontal scalability.  
+
+[00:23:53] Hannes Mühleisen:
+
+Yeah. I guess some things we might wanna do on this. So one thing that we might wanna do to support this better in the future would be to say, hey. We'll expose   some units of parallelization   for you. Right? Like, you're an engine and duck and say duckleg tell duckdleech and duckleg extension that if you wanna run this, and it will tell you, hey. Look. Here's this 475   tasks I have for you. And then maybe there's another way of interacting where you say, now I wanna this query, I want to run wanna run tasks so and so. Right? Like, you could imagine   some multistage   kind of interaction model with Duck Lake that would only make sense if you're running from a distributed engine, but we would be perfectly able to expose that kind of thing and and and make that a very smooth experience indeed. I think that's also something that came up after we released Duck Lake first and, realized what kind of stuff people got excited about. Right?  
+
+
+
+[00:24:40] Tobias Macey:
+
+So jumping back to the position within the ecosystem,   there are these table formats. There is this investment   into the interfaces that they provide, whether that is directly via the metadata layer or through the rest catalog in the case of Iceberg or the Unity catalog in the case of Databricks.   Duck Lake in and of itself doesn't necessarily   prevent you from being able to use some of those same concepts and primitives from the consuming side. And I'm wondering how you're thinking about the   integration path either by migrating from Iceberg to Duck Lake or being able to interoperate between Duck Lake and Iceberg or Delta.   And in particular, if you have   a REST catalog implementation,   why not just put Duck Lake in as the implementation detail and get rid of all of those JSON files that you have to shuffle around in the back end?  
+
+
+
+[00:25:37] Hannes Mühleisen:
+
+Maybe that's something for Mark since you have spent so much time on this.  
+
+[00:25:40] Mark Raasveldt:
+
+No. No. Absolutely. Yeah. I think that's definitely something that we are, looking into is basically making   Duck Lake a back end for the Iceberg rest catalog. Because as I see it, the Iceberg rest catalog, in spite of its name, is not actually   that tied to Iceberg, and they're trying to   further and further detach it from Iceberg. And, actually, they have to do that. So the Iceberg the table format that has the JSON files, the AVRO files, there's a lot of inefficiencies because you have all these files. So, basically, in order to get rid of these inefficiencies,   you want to get rid of these files. So if they are going to solve these problems, the inefficiency problems in that catalog implementation,   they have to   make that transparent. They have to make it so that the APIs, they could be backed by the files, but the data could also live elsewhere.  
+
+Of course, once you have achieved that, right, like, once you no longer need those   Avro or JSON files, at that point, you may as well say, oh, actually, I don't need the iceberg table format at all anymore, and I can just put Duck Lake behind the iceberg rest catalog. So it's also I would say that in spite of the name, these are two very distinct things.   And we may actually have a future where there is an Iceberg rest catalog that's backed by Duck Lake, and maybe that's even, like, the most popular approach. That's very possible because there are advantages to putting a REST server in front of your,   lake house solution. Like, it does offer a bunch of advantages that you would not get otherwise. And, of course, there's also the interoperability   that is important.  
+
+
+
+[00:27:12] Hannes Mühleisen:
+
+Maybe on the interrupt, I should also mention that in Duckleg, we have blatantly   stolen the iceberg   format and conventions for writing the table files on parquet   and write the delete files on parquet. So those are compatible. So you can actually have a if you have a iceberg,   table sitting somewhere, you can basically instantiate a duck lake table on those same files without without touching those files.   That's pretty cool to do. And, obviously, the inverse would also work.   You could have these files and then stage them in a iceberg transaction later on, and that would,   that would, work without actually rewriting those files because, yeah, we just decided to, that there was no actual technical reason to diverge from whatever Iceberg was doing. And so we just used the same sort of conventions there. I think we're pretty close on an import feature. I'm not entirely sure.  
+
+
+
+[00:28:05] Mark Raasveldt:
+
+We we actually have an import feature. Oh, there we go. So it it   will it will land soon. There's an import from a conversion from Iceberg to Duck Lake. Not from Duck Lake to Iceberg yet, but that will also come.  
+
+[00:28:18] Hannes Mühleisen:
+
+Right. And so then you can basically yeah. You can pull down I think it's an interesting use case where you can pull down a a snapshot from an from an Iceberg table into Duck Lake and then carry on there. I think it's always important for new things to be, let's say, flexible on on import. Right? Like, that's, that's that's one of these things.  
+
+[00:28:36] Tobias Macey:
+
+That also helps to address my next question, which was going to be that in terms of iceberg as a format, it is very conducive   to a process that is completely naive   and unaware of the actual catalog that is managing multiple tables, where as a process, I can just write the parquet files. I can write the metadata. I can be a purely file based operation and not have to worry about integration with any other APIs or manage database connections and those permissions. As long as I have permission to the object store, I can actually maintain my own iceberg table in isolation.   And from a integration perspective, that's very beneficial because I don't have to worry about those added complexities.  
+
+Whereas with something like Duck Lake, where there is that SQL process   involved, I would need to be able to write to the object store as well as write to the database back end that is managing that metadata so it adds an extra step and an extra set of complexity.   But if I'm able to rate it as a pure Iceberg   table   via files only and then incorporate that into Duck Lake via an import process, it helps manage the ease of integration   and adaptation   for that broad ecosystem of connectors that already exist for being able to write Iceberg format.  
+
+[00:29:58] Hannes Mühleisen:
+
+I agree. But I I'm I'm actually wondering. Maybe you see more of that than than we do, but I have this impression that the pure file based version of Iceberg is actually, like, kind of deprecated at this point. And, I mean, I had some discussions with people in the iceberg,   sort of world on this. At some point, I was like, hey. I love this file based thing. Let's do that. And they said, no. No. No. No. It's all gonna we're actually not gonna be able to commit   a change without talking to the rest catalog in the very near future. I'm not entirely sure where they are on this discussion at the moment, but I had this impression that they are   moving or have moved basically to this world where you it's no longer enough just to stage a bunch of files. I'm not sure what your what your take on that is actually.  
+
+
+
+[00:30:44] Tobias Macey:
+
+So in particular with the DLT implementation   of Iceberg, if you're using their open source version,   they don't have any integration with   the catalog. It's purely   they will write the Iceberg table and the metadata.   It will use a SQLite   catalog for the purpose of the actual transactions   that they're conducting,   but that is left as an exercise to the user to actually manage the catalog integration after the fact. Another interesting   element within the ecosystem   is the s three tables support for Iceberg, where the bucket itself is responsible for managing the table metadata and the catalog. And so that's another interesting evolution of that ecosystem where they're trying to remove that piece of complexity   from the consumer.  
+
+
+
+[00:31:33] Hannes Mühleisen:
+
+That's a fair point. We're actually working with the s three tables team too on on on that exact sort of, you know,   aspect of how to make, the integration with with s three tables as painless as possible, which is kind of what we are specialized in at here at Ductify. It's removing   as much pain as as possible. But in this case, I think that, yes, you're right. There is an additional complexity  
+
+[00:31:56] Mark Raasveldt:
+
+Well, maybe to file based approach. Sorry, Mark. To to add to that, Ductify can be purely file based as well because you can also use a SQLite or a DuckDuty file as your database.   The only,   limitation there is that you cannot directly attach or write to a database   using only an object store. So your database, your metadata store needs to sit on a regular sort of SSD or hard disk based medium. But that is also a limitation for SQLite, of course, if you're using that as your Iceberg REST catalog.  
+
+[00:32:25] Tobias Macey:
+
+Now in terms of Duck Lake specifics,   obviously, it simplifies   the implementation stack where you don't have to worry about the proliferation of files, having to read all of the files before you can write the latest transaction.   And then if you have multiple writers, then you have conflicts where you have to do multiple round trips before you can be sure of your commit. What are some of the other capabilities   beyond Iceberg that Duck Lake either does or can offer? In particular, I'm thinking about things like proper primary key, forward key constraints,   indexing, etcetera.  
+
+
+
+[00:33:00] Mark Raasveldt:
+
+Oi Wei, unfortunately, we don't have indexing or a primary key, forward key constraints.   It is interesting.   It is technically definitely possible,   but there is a very high cost to pay that I think most people will likely   not want to pay. Maybe that is not true, though. Like, I think that's it's a very interesting question. Like, what is the cost that people are willing to pay in order to get constraint verification   in these kind of systems? But as far as I'm aware, I don't think there's any sort of blob based system that really   supports primary foreign key constraints. Like, all the traditional database engines like BigQuery and Snowflake,   they don't really have support for this. And also all the other lakehouse formats don't have support for this. It would it would be interesting, but it's not really I think the cost of doing this for large datasets would just be prohibitively expensive essentially to the point where you probably don't wanna do this if you're going to have any sort of scale. And if you're not, then maybe a lakehouse format is not the right format. But maybe that's also   again, maybe I'm wrong about this. Maybe there is a desire. As for features that Duck Lake has, I think one of the cool features that we have is the data inlining feature.  
+
+So effectively   when you write data to Duck Lake, you don't necessarily need to write it to a Parquet file on S3. If your change set is small enough, you can also write it directly to the metadata store. And the way that you can think about this is kind of makes sense. If you're writing a parquet file to S3, right, you're already writing some data to the metadata store. You're always writing like, okay, where is my file? What is the min max values of these columns? Right. You're already writing like a bunch of data there anyway. If your data is small enough, it may be about the same size as the metadata you would write. So why write the file at all? And that gives you kind of a nice thing where you can write data into the metadata   store if you have, like, very small write. So you can insert, like, 10 rows, 10 rows, 10 rows into the metadata store. And at some point, you can then write that out to a parquet file essentially using the metadata store as a sort of buffer. And what's cool about this compared to, like, standard buffering approaches is that that data becomes immediately visible. So because it's part of the same   transactionality   as your metadata,   you insert your 10 rows. And instead of having it sit around in some buffer where you cannot query it, it is immediately visible, follows all the same principles, all the same asset principles. Like, it's it's immediately there. And that's very important because, otherwise, like, what you generally see on top of things like Iceberg is that you have a a buffer, probably some Kafka stream or something, that keeps data around for a certain number of seconds or until a certain data threshold is read. So it's like, okay. I keep data around for, like, five seconds or until I have a 100,000 rows. What ends up happening in practice is you always hit the five second threshold because probably you're not streaming enough data. So you end up writing, like, tiny files every five seconds anyway. You have that five second delay. Like, there's a lot of issues that basically arise from this buffering. Plus you have to do the buffering. And that's essentially solved by doing this data inlining.  
+
+
+
+[00:36:04] Hannes Mühleisen:
+
+That's really cool. I mean, this is something that, you know, we have a database. We might as well use it. Another thing I really love about, Duckleg   is the is the encryption feature because, basically, what you can do in Duckleg is you switch on encryption, and we will generate   a unique encryption key for every parquet file we write out to object storage and actually store the key in the metadata catalog. And so what you now have is you have you can put your Duck Lake on a completely untrusted storage, and whoever has access to it can do absolutely nothing with those files because it uses the standard parquet encryption, and they're just not readable to anyone else. I think that's that's really exciting because it means you can put them on your, like, your your,   you know, your CloudFlare,   edge distribution   thing, CDN kind of setup. Everybody can access them, but nobody can really do anything unless you have access to the metadata catalog, which has the keys in it. As really just a single Boolean configuration flag to switch this on and we will just automatically do all that. I think that's also super interesting to have because it fixes a lot of these kind of authorization problems that we see with people writing things to object stores is where now you have to set up crazy policies   or vent keys or things like that where you go like, uh-uh. We are just gonna write encrypted files to this object store, and it's it's just they are just,   you know, an unusable,   useless to to anyone else. So I think that's also a really cool feature.  
+
+I was also wanna point another thing out for for Duckleg, which is more like it's not like a a qualitative thing, but we have lakehouse formats and Duckleg have this concept of snapshots. Right? But in these existing formats, a snapshot is actually quite expensive, And people are sort of discouraged from having more than n, where n is like a a small number of snapshots at the same time. Right? Just because the way the formats are designed, there's just a huge cost of having a snapshot. For Dark Lake, on the other hand, a snapshot is a couple of rows in a in a in a database. Right? Like, it's not there's no   significant cost from having an additional snapshot. And I think just being being able to have thousands of snapshots sitting around and basically not caring too much is just one of these fixes. One of these the the biggest pains that we've seen from people complain about with existing formats is that they they say, hey. You know, this this works great, but once I start actually making changes, for example, to fix the freshness issue that that Mark,   mentioned, we'll have thousands of snapshots, and that's actually not possible because then our JSON file explodes, which is, of course, a good this is a great problem. So these are I think these are some of the things we find really, really exciting about about Duck Lake is that there is none there's no such restrictions. Again, there because these restrictions originally come from having everything have it to be the file on object store in the same sort of domain as the data files, and we don't do that. Right?  
+
+
+
+[00:38:43] Tobias Macey:
+
+The permissioning   aspect is another piece that I wanted to touch on. And in particular,   I'm interested   in whether because Duck Lake is implemented   as largely a SQL metadata layer, how that plays into   being able to control things like column level access controls   versus just row level access controls that have become the predominant means of controlling what people can do? And to the point of encryption,   what does Duck Lake offer in terms of things like column masking for things like PII, etcetera?  
+
+[00:39:18] Mark Raasveldt:
+
+Yeah. The the column masking is a is a great question. I think in in terms of, like, fundamentally, the click has the same access control   possibilities   as other lakehouse formats. In the end, your data sits in a bunch of parquet files. You need to somehow regulate   who accessed those files. Right? So there's different ways you can go about doing that. The sort of the the simplest way is like table level access control where all your files for one table sit in a certain subdirectory. Right? Like, say you have, like, schema slash   table slash and then you have all the files for the table there. Then you can access do axe control on that directory. If you wanna do a row based axe control, what generally happens in these formats is that you do partitioning, and then you can do attribute based axe control. So instead of saying   I control the permissions per row, because that's actually really hard if your data sits in a bunch of parquet files. Right? You make sure that the rows that you want to do the axe control on end up in different files. So you can, for example, partition on your customer ID, and then your rows for one customer end up in a different file, then your rows for another customer. And then you can do attribute based axe control on those partitioning keys effectively. The column based axe control, that's very interesting. And And I think that's where the encryption could come in, but this is not something that's currently supported yet. In the parquet standard, it's possible to have different encryption keys per column, which would allow you to do column masking, like you mentioned, through the use of those encryption keys. So you could then have different encryption keys for each column. And it's because even if you can read the whole file, because that uses industry standard encryption algorithm algorithms, you will not be able to actually   understand the data that is in those columns unless you have the, the encryption keys for each of those columns. And then you can do the metadata server can choose which encryption keys to give you based on the permissions that are set. So it could say, oh, you can have the encryption key for the username column, but maybe not for the password column. Or maybe you can have the city, but not the address   or, like,   whatever PII you wanna hide, you could do like, maybe not the Social Security number.  
+
+
+
+[00:41:22] Hannes Mühleisen:
+
+Yeah. And I think what's interesting is that this also reuses a bunch of existing and well understood mechanisms.   So let's say you're using Postgres as a metadata server for for Duck Lake. That's pretty common. It's one of the ones that kind of we recommend, I would say. They have row level access control, and you can use those row level access control features on the metadata   tables for Duck Lake to, for example, like Mark said, hide the encryption keys for sensitive stuff from from some users but not from others. So, indeed, it's it's not there yet, but I suspect we'll, have support for column level encryption keys because why not, in one of the in in some point of the future. And then you could even do that for columns at the moment. Indeed, as as Marcus said, we are kind of restricted to the partitions.  
+
+[00:42:04] Tobias Macey:
+
+The other piece that I'm sure listeners would complain about if I didn't ask is the vector type, where DuckDB   has a vector type support.   You can stick arbitrary arrays into parquet files. And I know that the Starburst folks in particular have layered in some vector capabilities   in their implementation of how they work with Iceberg, at least in their Galaxy product. And so I'm curious how you're thinking about the ability for storing and retrieving   vector types within the Duck Lake ecosystem.  
+
+[00:42:38] Mark Raasveldt:
+
+Well, we don't have any immediate plans for putting vector indexes in there. But the vector type, the array type, these are definitely   supported in the duck click duck click format.  
+
+[00:42:48] Hannes Mühleisen:
+
+Yeah. Like in duck DB. Right? Like I said, we have this special vector type and, that that you can use to store vectors and that can also go to duck click. Yeah. But if you wanna store the vector similarity search index, currently, that's, not available for Duck Lake.   I think we could imagine coming up with some story for indexes like this to also go to Duck Lake, but, it would because you couldn't you can you know, many indexes can be represented as a table themselves, and you could use that basically, a recursive technology to to, to store an index. But, that's that's kind of future work. Hey. If you wanna work with us on implementing this, let us know. But, but, yeah, that's currently not planned. No.  
+
+[00:43:26] Tobias Macey:
+
+Yeah. I think it would be interesting to look at what the Lance format is doing as inspiration   for the broader ecosystem of lakehouse formats and whether there is some possibility   of eventual unification at least on some of those aspects, if not in terms of the actual implementations.   Yeah. Sure. We actually met we actually met him, last week, so it was kind of cool to talk, you know, in the same room from different lakehouse,   formats.   So the other aspect of what you're doing with Duck Lake, obviously, with DuckDB   as the   prime example and the initial implementation   target is that the maybe de facto way of working with it is using DuckDV.  
+
+DuckDV   as a technology has already had a massive impact on the industry and how people think about where processing happens and what you can do at which locations. And so with the introduction of Duck Lake, I'm curious   how you're seeing that impact the way that teams think about the overall   architecture and implementation   of their data estate and what processes happen, when and where?  
+
+[00:44:34] Hannes Mühleisen:
+
+Yeah. I think I think that's actually the thing we are maybe most excited about. We mentioned it earlier is the multiplayer capability for DuckDuty. And and so, basically, having a story that says, hey. I wanna use technologies like DuckTV or OpenTable formats, but I also need to have some sort of semblance of central control over, you know, what is the truth. And I think we have now a a story essentially saying, hey. Look. Here's here's our vision on how this looks like. And I think what is fascinating about is it kind of takes this traditional two tier architecture or three tier architecture   and flips it around where, like, your client or your local machine is no longer sort of the smallest light in the in the architecture, but it's suddenly actually the the prominent player because it's where the compute happens. It's where,   you know, where all the where users of interact with your local machine. It's the one that gets the query. It's the one that starts running things with local files, possibly remote, you know, pulling in remote things. And then the point of achieving sort of consensus   is basically going to the catalog and saying, hey. I would like to commit these things. Right? That is, I think, fundamentally different from this traditional architecture where you have to sort of bow to the my almighty, almighty data warehouse sort of overlords.  
+
+And you would be lucky if you could get a thin trickle of data through this terrifying protocols that these things traditionally use. Right? So I think it's actually quite fascinating. And and and as with Dactyb, you mentioned it has revolutionized the art. The the data architecture we're glad to hear it. It's it's like sometimes I'm a   bit concerned about what what we've done. But it's I think it's really fascinating   to to see this flip of the architecture. And at the same time, I think it's gonna take another ten years till we've seen sort of the creative use cases because we're only now starting to see the creative use cases of people doing stuff with DuckDVR. I mean, it's maybe not entirely fair, but let's say the wildness of the things that people do with DuckDVR   is is increasing by the day. And I think this is another one of these cases where it's gonna take the community a couple of years to be like, oh, hey. We can do this now, and it totally works. So I'm, for example, I'm I'm gonna be very excited once the first iPhone app that just runs a local duck DB with Duck Lake to centralize   some sort of data   coordination using Duck Lake pops up. There's no reason this cannot be done. This is, you know, this is this is actually the design can do it. It's just it's gonna take a while, I think, for for data engineers to consider going a bit outside of the what they know. But I think it's extremely   fascinating to see this, yeah, let's say, authority flip almost. Right? Like, local first.  
+
+
+
+[00:47:06] Tobias Macey:
+
+I think that one of the interesting aspects of what DuckDV has shown and has been mirrored with other projects such as Kuzu DB and LanceDB   is that the communal   wisdom that data gravity   is the most important factor in how you think about your overall architecture   does not hold the same weight as it once did. Obviously, there are still aspects of that that are real, and we can't overcome the laws of physics. But there are use cases where the data gravity does not outweigh   convenience. And so I'm wondering how you're thinking about that mode of thinking and the role that data gravity still plays in some of the ways that these newer utilities as well as the investment in things such as aeroflight and more efficient transfer protocols   helps to break that log jam of everything has to be centralized because that's where all the data is, and I have to send my compute to the data, not the other way around.  
+
+
+
+[00:48:04] Hannes Mühleisen:
+
+Yeah. I I think that is very fascinating because I remember that I was shocked when people started telling me about the disconnect of storage and compute. Right? It took I think it took me way longer than I should have to accept that that was the sort of the the way of doing things TM. Right? Because I I still in my head had this had this idea of the Hadoop sort of era where   lots of work was done to to put that that worker executor, whatever they call it, onto the very node that the HDFS block was stored. Right? And I think I think letting that go, it took me longer than I would have expected. And so but once once we accept that storage and computer are disconnected, I mean, is what gravity is really left? Like, is it the data center gravity? Right? Like, we have to put it into the same the same AWS   zone or whatever. Right? Like, I think what's what's really fascinating there is that we got basically a a a way of running arbitrary code in these data centers to something that's would have been unthinkable in the past. Right? Like, imagine twenty years ago, you're going to IBM and say, I need to run my Ganki program in your data center. It would have said absolutely not. Or I I need to run my Ganki my Ganki program here next to your, you know, national data storage facility. They would have said absolutely not. Right? But now, that's absolutely commodity.  
+
+So so,   I I think that I I don't I don't see a whole lot of gravity sort of remaining besides   sort of between data centers. Right? I think that's that's still something that people underestimate generally. But we do we do have this capability of putting putting stuff next next to where the data tends to be stored. And and with DuckDuty, I mean, there's there's, there's there's use case where people put DuckDuty   on, like, you know, undersea   rover   because that's where the data is, and, and there's this very thin line going up to the surface. And then and these in these cases still applies, but but I think in the general case of data processing, it's it's no longer relevant. And I think it is true that these newer engines have simplified this. I think, like, if you think about the storage like, if the binary size of something like DuckDuty is, like, I think, 40 megabytes at this point, right, or maybe 25, depending depends a bit on the platform. This is something you can put almost anywhere. Right? It's not like you have to run a spark cluster there. And I think that has also changed the thinking. Again, in my for my for my taste, it hasn't started to think change the thinking quickly enough, but then I always want I always want more. So that's okay. But, yeah, gravity, I would say, I don't I don't see a ton of a ton of it at the moment.  
+
+[00:50:27] Tobias Macey:
+
+And so Duck Lake is definitely a very interesting   implementation.   It's great to see new ideas entering the ecosystem.   If I want to go and start using it today and convert all of my Iceberg tables into Duck Lake, What is your recommendation   for people who are eager to get started, or they just wanna jump on the the new hype train and go all in on Duck Lake? How do should they get started? How should they think about what what are the decision points about where to use it, when to use it, how to deploy it, etcetera?  
+
+[00:50:56] Mark Raasveldt:
+
+I I think one interesting thing of using it, if you already have an existing Iceberg   catalog, is the you can use Duck Lake as a local   cache for Iceberg. So instead of always going back to your single source of truth, the Iceberg catalog, and looking at all these JSON files, these Avro files, you can use our Iceberg imports   to already just use Duck Lake as a sort of local   version,   local cache, if you will, of your whole Iceberg catalog, including time travel and all that stuff. I think that's a sort of interesting transition   from Iceberg where you can keep on using Iceberg in conjunction with Ducklink as well.  
+
+
+
+[00:51:33] Hannes Mühleisen:
+
+We should also put, put a small disclaimer here. Ducklink is currently version 0.2.   And just from that version number, you should exercise   some level of caution. Right? So we are still in pre release Duck Lake. By the way, doesn't stop people at all from running this in production. That's this is something that that has absolutely amazed me. Right? Like, we get, like, an an email a week basically saying, yeah. Yeah. We're running this in production. Yada yada yada yada. We go like, okay. Cool. But, honestly,   we can sleep quite well because   Ducklink relies heavily on very well understood technology. Right? Like, parquet reading and writing is well understood. SQL is also pretty well understood. Object stores are pretty well understood. So there there is not like a   there's no, like, experimental compression algorithm involved here that would make us very, very nervous indeed. Right? So I think that's that's why I think it's very cool to see that. I I applaud the the, you know, the bravery of people. But to come to the disclaimer,   we are expecting a one dot o in the not too distant future. And at that point, we actually expect this   spec specification   to   slow down a bit in development. Right? Right now, there's still a lot of movement there. Well, not crazy amount, but there is movement there, and we expect that to slow down over time. But, yeah, that's that's,   that's just,   yeah, a bit of a disclaimer there that it's we're still something that it's it's, like, three months old at this point. And I have to say, we are also getting emails   all the time with people praising this. This is something that I don't I didn't expect this. So when we came out with Duck Lake in the first place, we were like, okay. You know? We'll see what happens. But we got a ton and ton of positive feedback of people saying, like, yeah. This is exactly what we've been waiting for. Finally,   you know, a a data lake format we understand. That's one of the that was one of the sort of the biggest sort of things that that we got there is that because, yeah, again, it's it's combines well understood technologies. It doesn't doesn't rely on Avro, which is very obscure if you think about it.  
+
+
+
+[00:53:32] Tobias Macey:
+
+And another piece that I'm curious about is, at least anecdotally,   what you're seeing in terms of performance difference when querying   across Iceberg versus Duck Lake, particularly using DuckDB as the client since it has support for both?  
+
+[00:53:48] Hannes Mühleisen:
+
+Yeah. Benchmarks are hard, but we have well, the the the let's say the we did count the number of round trips you have to do to query an Iceberg table, and we did count the number of round trips that you have to do to query a duck lake table. Right? So this is like you going to talk to some other system waiting for the response then proceed. I think for I for iceberg, the number is six or something or seven. And for duck lake, the number is two. Now is that gonna have impact on performance? Yes. Probably, it will. We are seeing   much quicker round trips just because of the, you know, the simplicity of it, just because there's no there's no seven round trips to object store or or the rest catalog or things like that. But I think it's too early for us to say, oh, we're gonna you know, we're not gonna put like a, hey. It's this many times faster than than something else. It's also not really the messaging that we that we like. Right? Like, it's there is gonna be a performance difference. I think there has to be just because of the complexity involved. But,   we are we're not yeah. We don't have, really   a a number there. And, it's again, it's not really the the way we we'd like to communicate about our technology. We want them to be convincing   sort of on its own. Right? Like, we don't really we can compare against ourselves from five years ago. Great. But not not like I feel like it's not very classy to do that.  
+
+
+
+[00:55:05] Tobias Macey:
+
+And another piece that I'm interested in is because you now have   a proper database as the metadata store, how does that factor into things like multiversion concurrency control at the lakehouse level?  
+
+[00:55:20] Mark Raasveldt:
+
+Yes. So the the,   the nice thing about having this database   as your sort of central point of,   concurrency of transactionality   is that   it well, one, it offers you transactionality on the entire catalog level. Right? So you can do cross table transactions.   You can do, like, all the DDLs transactional.   Like, it really gives you, like, transactionality   everywhere, which is very, very nice and a property that I think many people appreciate. The other part of it is that because you have this sort of one hop updates,   you can have a lot more concurrency going on at the same time. Because if you do an insert into   Duck Lake, in the end, all you do is do, like, write a few rows to a database, and that's your hot path. So you can have many,   many concurrent writers all inserting at the same time into the same duck lake without any problems.  
+
+
+
+[00:56:15] Tobias Macey:
+
+And so   recognizing   that we're still very early in the introduction and adoption of Duck Lake, I'm curious what are some of the most interesting or innovative or unexpected ways that you've seen it applied already?  
+
+[00:56:28] Hannes Mühleisen:
+
+Yeah. I I think one thing I wanted to point out is, something people call the frozen lake. It makes me think of Disney, obviously. But the frozen lake basically, the idea of saying you have a dataset that you update sort of kind of rarely, for example, official statistics or something like that. And you publish this   using   basically object store of a website like a a HTTP server. And like Mark has mentioned, we can put the metadata   store in in the form of a Ductify file or SQLite file on object store or on on on a web website as well. And with that, what you can do is you can actually attach to this frozen lake in read only mode from everywhere taking   advantage of content delivery networks. And you can look. You can see the entire history. You can see all the revisions. You see all these changes that have been made. So it's really nice if you have some secondary process that has to look at, hey. Has the official statistics been changed? Okay. What were the changes? You can do all that, but you can't write, which is not the point. But then again, whoever maintains this dataset has a nice path where they download the metadata file. They make their changes. They reupload it. And together with the data files they changed. And it's a it's a nice and defined process   as opposed to, I don't know, dumping a bunch of CSV files in a in a FTP server like in the old like, it's very common still, I hear. Alright. So I think that's really cool and we're gonna actually, some of the people we have authored a a blog post that we're gonna it's gonna come out in the next couple of weeks, I think, about this concept. So that was really cool to say, hey. Look look, we actually only need a read only path And it's already plenty exciting to have that simply because it means you can see what happens, see the changes that happened over time. Right? Like, that's that's something I think that's very cool, with Duck Lake. Mark, did you see any other exciting use cases? I can't think of anything else at the moment.  
+
+
+
+[00:58:10] Mark Raasveldt:
+
+I think the frozen lake is the most surprising for sure. I think what we've seen otherwise is a lot of people   are using this for, like, basically whatever they would use the traditional lakehouse stack for. One cool thing about Duck Lake as well is that because you can run it completely   locally very easily and very efficiently, right, by just having a DuckDuty file and a bunch of parquet files locally, is that we've seen a few people try to use this for, like, offline   analytics and stuff. So you can maintain a Duck Lake completely locally and then essentially use that as your data store. And that then replaces   what is often like either a DuckDuty or SQLite database, which then has the, well, issue that it's not in, like, an open file format or it replaces a sort of handcrafted,   often hive partitions   set of parquet files that they have to patch around over. Right? So there's this thing that if you want to use a fully local   data solution, I think Duck Lake works very well as well, actually.  
+
+
+
+[00:59:08] Tobias Macey:
+
+That also   introduces the possibility   of Duck Lake easing   the   divide between   development and production environments, particularly in the case of things like dbt work flows where I want to be able to test my changes without mutating the actual production data. But I also don't wanna have to deal with making sure that I always have the credentials to a QA store or replicate the QA data. I can read from that production Duck Lake environment and just write a new Duck Lake to my local disk and then blow it away when I'm done with my testing before I ship my code somewhere.  
+
+[00:59:42] Hannes Mühleisen:
+
+No. I think that's that's also really cool. It's it's it's actually quite spooky. I think whenever I start using Duck Lake locally, I'm always just like, okay. Did this already happen? Had did it work? And it's like, yeah. Because it's it's it's not like you don't need 15 Docker containers. You need Duck DB and and and that that's enough to to basically run a local instance, and that's and that will have all the capabilities that an a cloud like a a bigger instance will have in terms of, like, feature set. And so I think it's it's really fascinating,   for this local development. I mean, like we see with DuckDuty, lots of people use DuckDuty for local,   prototyping and tests and such, and, you know, we think that's great.  
+
+So  
+
+[01:00:20] Tobias Macey:
+
+And to your point of frozen lake as well, because DuckDV has a WASM target, you can put the entire DuckDV metastore and client in your browser and not even have to have a server component for it. Yeah. Although, some say that in our lab, we've already demonstrated  
+
+[01:00:35] Hannes Mühleisen:
+
+read, write to Iceberg and Duck Lake from Wasm. So so that's also something that's maybe coming, in in the future that we can do can do crazy things there. You can also run, you know, the Duck Lake metadata stuff in your browser. Nothing keeps you from doing that, obviously. It's,   it's kind of funny.  
+
+[01:00:52] Tobias Macey:
+
+And so   in your experience   of working on Duck Lake as a protocol, as an implementation   target, and working with the community as they start the adoption path? What are some of the most interesting or unexpected or challenging lessons that you've each learned in the process?  
+
+[01:01:10] Mark Raasveldt:
+
+That's a great question. I I think, actually,   what surprised me the most was that it wasn't that hard. Like, I mean, that's that's weird to say, but, like,   when I first got acquainted with lakehouse formats,   I thought this was   very complex,   and I think   it is. But then when we got started on Duck Lake, I think at every step of the way,   it actually   like, we didn't really face any big hurdles. Like, it all just kind of worked. And I think that's a testament   to the simplicity of DuckDuty, of course, but I think also to the building blocks   that DuckDuty itself gives you. Because DuckDuty,   it builds on top of basically everything we have built in DuckDuty   in the past eight years or seven years. And it, like, it builds on all the connectors we have to the various database systems and builds on our,   like a blobster integrations, the parquet reader, parquet writer,   the asset we have ourselves, the formats we have ourselves. Like, it really builds on top of everything we have already built in a way. So I think I I think it was for me, it was very cool a very cool revelation kind of like, wow. You can do all this cool stuff actually very easy with all the tools that we have ourselves built here.  
+
+
+
+[01:02:24] Hannes Mühleisen:
+
+Yeah. And I think it's also what I mentioned earlier, what kind of increases our confidence in in Duck Lake as a concept. Right? Because it it uses components that we trust. So, we have a higher degree of trust in our parquet writer at this point. Right? Like, we have a high degree of trust in our object store integration. Right? Like, there's a lot of work by actually, a lot of people here at maybe wanna also wanna give a shout out to the Ductible Labs team here that where I don't know how many people at this point are working on these components inadvertently kind of contributing   to making at least the the duck to be implementation of duck lake better. Right? Like, somebody's working on adding a new object store well that can be used by duck lake by the duck to be implementation at least. Right? Like, somebody's working in a new database interface. Well, that can be used by Duck Lake as well. Right? So there's like Marcus said, we built we built on top of a on top of a lot that we have, but I think we're also improving all of these things constantly, which means that it's constantly getting better as well. So I think that's that's also really cool to see. And, obviously, you know, it's a big shout out to the team here that that is pushing all these individual components, like, every day. Right? Like, it's pretty wild. And so when Duck Lake still when we first came up with this idea for Duck Lake, obviously, we could build on all of these things.  
+
+
+
+[01:03:36] Mark Raasveldt:
+
+And also to add to that, Duck Lake itself has also improved   the other lakehouse integrations.   So by building Duck Lake, we built a bunch of components that are now being used in also the Iceberg and Delta integration. So it all kind of like it feeds into itself, which is very cool to see. And  
+
+[01:03:52] Tobias Macey:
+
+so for people who are interested in this new format, they're excited by the premise of not having to manage all of these JSON files and all of the round trips. What are the cases where DuckLake is the wrong choice, whether the DuckDV DB implementation   or the protocol itself?  
+
+[01:04:09] Mark Raasveldt:
+
+So I think the limitations   are very similar to the ones of other lakehouse formats. Right? So I think where it shines is where you have a bunch of, like, you want to have data stored in open formats like parquet.   You want to have data sitting in blob stores. I think that's where it shines. Once you don't have those needs anymore, I think other data formats could perform better. Like I think, for example, DuckDV's own database format generally performs better than parquet files because it uses   like more advanced lightweight compression algorithms that are not present in parquet files. It has support for things like primary key constraints that are not in these lakehouse formats that are not in duckling. So I think once you need to do things like that,   like random access access is a big one, right? Then formats like Ductoo's own database format would perform better. And of course, also it is an analytical   format. Right? So it's designed for read heavy workloads   and for batch writes. If you're doing a lot of   updates, a lot of upserts, things like that, like anything you would maybe normally use Postgres for, probably it's not going to perform quite so well in Ducklet.  
+
+
+
+[01:05:16] Tobias Macey:
+
+And as you continue to iterate on the specification   and the reference implementation,   what are some of the things you have planned for the near to medium term or particular projects or problem areas you're excited to explore?  
+
+[01:05:30] Mark Raasveldt:
+
+So we actually have recently published a road map for DuckLake. I think the the things we're we're, of course, addressing a lot of the immediate things that are are missing, such as adding more support for compaction, things like that that are necessary for actually productionizing   these workloads.   Other things that we're excited about are we're adding support for variants,   for geometry  
+
+[01:05:55] Hannes Mühleisen:
+
+types. We're planning to add support also in the future, probably for things like materialized views, although that is a bit further out. Of course, also just moving towards the one dot o is also something that, we're excited about. Like, it's it's something that we we noticed with DuckDB. Okay. It took us a couple of years. But, like, once we when we published the 1.o,   it was really a a point where lots of more people came suddenly came to the project because, I don't know, there seems to be some corporate rule that you cannot use zero dot x pro software.   But once we had released the one dot o, lots of more people came to it. And as I mentioned earlier, like, as as we kind of declare the current sort of specification   to be more stable,   I suspect you're gonna see also just a lot more uptake,   more serious uptake beyond kind of, you know, toy projects with with Duck Lake. So that's also something really interesting to see. But, yeah, I mean, we are you know, we are we are also kind of we are also quite blown away, I think, with the response from from from Duck Lake. Right? Like, sort of almost   overwhelmingly positive response. And we know we are kind of complicating a lot some of the lake house world by throwing another form into the mix, and we apologize for that. But,   people   didn't like, people reacted very positively to that, which which was very nice.  
+
+
+
+[01:07:09] Tobias Macey:
+
+Are there any other aspects of the work that you're doing on Duck Lake and its position in the ecosystem   or the implementation  
+
+[01:07:18] Hannes Mühleisen:
+
+or adoption path that we didn't discuss yet that you'd like to cover before we close out the show? I think one thing I wanted to maybe mention is that people sometimes ask us, yeah, but what if, you know, Iceberg just adopts these ideas and then they just switch to a to a SQL based back end? And then what about you? And then we actually say, well, great. We win. For us, we don't have to we don't have to it's also not a sense of winning and losing losing. But if, let's say, the over the ecosystem   maybe admittedly or unadmittedly adopt some of these ideas, we also consider this a huge success. Right? For us, it's, I I mean, at least we care really deeply about how people manage data. I think it has been way too complicated for way too long. And if anything we can do to improve that for sort of the average analyst out there, you know, we are very happy about that. And whether that's, at the end, our lucky logo on it or not,   isn't such isn't such a huge sort of thing.  
+
+
+
+[01:08:11] Tobias Macey:
+
+Alright. Well, for anybody who wants to get in touch with you both and follow along with the work that you're doing, I'll have you add your preferred contact information to the show notes. And as the final question, I'd like to get your perspective on what you see as being the biggest gap in the tooling or technology that's available for data management today.  
+
+[01:08:27] Hannes Mühleisen:
+
+The biggest gap? Well, if you knew, we would make another company. No? But, I think there's still such a huge gap between what is kind of possible and what is the the daily reality of the data practitioners.   I think I think there's just there's just such a huge difference   in in what could be possible and what people are actually doing. And we try to work on that with, obviously, with DocuDB. One of the things   one of the reasons we did DocuDB was to to narrow that a bit. But I think when we sometimes we see, you know, like, peoples who show us what they're doing and and and then, you know, you just wanna cry a little bit and and be like, this cannot be the answer. But it's the best sort of what they have. It's it's it's the best I could do given the circumstances   often in corporate environments.  
+
+And that's something that I think is like it's it's like it's almost like like there's half of the population has to drive a car from the nineteen twenties. Right? That's kind of how it feels. And that would not I mean, that would not be considered   great. Right? Like, we would say, hey. Let's maybe do something, forget these nineteen twenties car people to maybe get a nineteen eighties car. That would be really great. Right? Like, that would be a big, big improvement. But, yeah, I don't I don't think we're there yet.  
+
+[01:09:34] Tobias Macey:
+
+The future is here. It's just not evenly distributed.   Alright. Well, thank you both for taking the time today to join me and share the work that you've been doing on Duck Lake and for all of your efforts on that. It's a very interesting and exciting entrant into the ecosystem, so I appreciate the time and energy you're putting into that, and I hope you enjoy the rest of your day. Thank you very much. Well, thanks for having us.   Thank you for listening, and don't forget to check out our other shows.   .Net covers the Python language, its community, and the innovative ways it is being used, and the AI Engineering Podcast is your guide to the fast moving world of building AI systems.  
+
+Visit the site to subscribe to the show, sign up for the mailing list, and read the show notes. And if you've learned something or tried out a project from the show, then tell us about it. Email host sift data engineering podcast dot com with your story. Just to help other people find the show, please leave a review on Apple Podcasts and tell your friends and colleagues.  

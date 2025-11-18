@@ -1,0 +1,197 @@
+EPISODE 1654
+
+[EPISODE]
+
+[0:00:00] ANNOUNCER: Apache Iceberg is an open-source, high-performance format for huge data tables. Iceberg enables the use of SQL tables for big data, while making it possible for engines like Spark and Hive to safely work with the same tables, at the same time. Iceberg was started at Netflix by Ryan Blue and Dan Weeks, and was open-sourced and donated to the Apache Software Foundation in November of 2018. It has now been adopted at many other companies including Airbnb, Apple, and Lyft.
+
+Ryan Blue joins the podcast to describe the origins of Iceberg. How it works, the problems it solves, collaborating with Apple, and others to open source it and more. This episode is hosted by Lee Atchison. Lee Atchison is a software architect, author, and thought leader on cloud computing and application modernization. His bestselling book, Architecting for Scale is an essential resource for technical teams looking to maintain high availability and manage risk in their cloud environments. Lee is the host of his podcast, Modern Digital Business, produced for people looking to build and grow their digital business. Listen at mdb.fm. Follow Lee at softwarearchitectureinsights.com. See all his content at leeatchison.com.
+
+[INTERVIEW]
+
+[0:01:28] LA: Ryan, welcome to Software Engineering Daily.
+
+[0:01:30] RB: Thanks for having me on. I'm really excited to do this.
+
+[0:01:33] LA: Great. I'm glad you're here. So, why don't we start out with a little bit about what Apache Iceberg is? First of all, what it's not. It's not a database itself. It's a layer on top of a data storage mechanism that provides database-type capabilities. Is that correct? Or how would you describe Iceberg?
+
+[0:01:51] RB: Yes. That's exactly correct. So, if you think about the components that we're working with, you've got, as a base layer, some object store like S3. Then you've got files in that object store, say parquet files. For a long time, that was basically what we thought of as tables in the data lake space. But there are concerns that can't be managed at that layer. So, schema is a great example. How do you drop a column if you don't know exactly where to encode that information? If you just look at the data files, they've got the column. And so presumably, it exists.
+
+So, there's this higher-level abstraction where you need some metadata layer to take care of things like what is the schema, how should I lay out files, and also, things that assist making things faster. Keeping extra metadata about what's in data files, so that we can skip through them effectively. That's the basic idea of Iceberg, what we call it, or what we describe it as, is a table format. So, it's like a parquet format, but at the table level. How we keep track of all the table metadata.
+
+[0:03:07] LA: Got it. So, itâ€™s to ease the interface between the person who's doing data analysis with this data, and the actual â€“ separating that from the storage itself. You can do analysis without having to change the fundamental structure of the data to match the way you're trying to process it.
+
+[0:03:30] RB: Yes. What we wanted to do was create a library that managed the table abstraction, because no one wants to work with a collection of files. That doesn't make any sense and it's not database native. What we want is this abstraction layer of I work with a table. It has rows, it has columns. I don't want to deal with the minutiae of how the rows and columns get baked down into files, in the file system. 
+
+[0:04:00] LA: How am I separating â€“
+
+[0:03:59] RB: I don't want to care about how large files are. We want that that separation. That's really what made people productive in databases for a long time. The abstraction.
+
+[0:04:11] LA: Yes, absolutely. Is that what inspired you to create Iceberg is the need for this abstraction layer? Was there no useful abstraction layer model that existed before? Why did you create this?
+
+[0:04:26] RB: So, there was an abstraction. I think from the very early days in the Hadoop ecosystem, people were thinking of datasets, and then Hive came along, and we started calling those datasets tables. The problem was that Hiveâ€™s model of keeping track of what's in a table and the schema of a table, and other metadata was just very, very simple. So, Hive said, â€œWell, the table is just a collection of directories and whatever data files happen to be in those directories. That's the state of our table.â€
+
+Well, that runs into a problem very quickly, which is, you can't make large-scale changes across directories, or even across files, atomic. Now, you've got this correctness problem. When I'm going and replacing files and doing some compaction operation, I either have to delete the files, and then write the replacement, or write the replacement, and then delete the files. Either way, someone who comes in and reads either gets missing data or duplicate data, or maybe both, if you do it a weird way. I don't know. So, we had a lot of correctness problems, that primarily motivated us wanting to provide some way of doing this more effectively.
+
+[0:05:41] LA: From that standpoint, Hive was more of a format presentation than what Iceberg is, is a true layer that does processing on the data as well, that allows abstractions more than just, here's the format of the existing data.
+
+[0:05:59] RB: Yes. It's a higher-level thing. So, Hive isn't really a format either, because it was never specified. It was how you did things. It was like, we all agree that when the data looks like this, this is what it means. But there are all these edge cases and oddities. When we created Iceberg, we wanted to solve those challenges by providing a library through which you can do operations, right? You can say something like, take these five data files, replace them with this one data file, and that happens atomically, and safely, and without locking.
+
+So, without making readers like, â€œHey, hold off on for a second, we're replacing filesâ€, or anything like that. We wanted that correctness, first of all. Then, secondarily, we wanted to also improve performance in object stores, especially, and fix some of the usability challenges like the schema stuff you were alluding to.
+
+[0:06:56] LA: It's the pieces of database ever missing from flat files, basically, things on top of that, yes. But flat files are not very database-friendly. So, if you put the database capabilities on top of flat files, you have some potential performance issues to deal with. How do you handle those sorts of issues? Are there still restrictions in the types of things that are reasonable to do within the SQL? Or are there other optimizations you perform on the data that allow you to optimize database-type operations on the flat files? How do you deal with those sorts of things?
+
+[0:07:39] RB: So, I think about this as slightly different than people have done it in the past, but really, drawing a lot of inspiration and stealing a lot of ideas from the database world. Because we didn't just go reinvent the wheel, I hope. I mean, we probably did. Everyone does in the software engineering project, somewhere.
+
+[0:08:01] LA: Software engineers are going to reinvent the wheel.
+
+[0:08:03] RB: Right. Well, because I can do it better. But what we wanted to do was really, use those principles and bring them in. So basically, layer on these ACID transactions, full schema evolution with SQL semantics, and things like that, using the same techniques.
+
+Now, the same techniques are because every database breaks down to files at the end of the day. It's just weird in the Hadoop space, because we expose the nitty-gritty details of those files to users and we have for a long time. So, part of what we want to do in the Iceberg project is alleviate the need to have everyday users pay attention to those low-level details. And we really want to make sure that the library is taking care of that, and users can remain above the abstraction of the table format.
+
+Now, there are some tradeoffs, especially in this space. But I think it's more the context in which we're building these database products than the table abstraction itself. We're building on pretty much immutable file formats stored in very large object stores, or in HDFS as well, which is also not a random-access file system. So, we're largely dealing with files that get written once, and then are never changed or modified in place. We're also sharing those data files between a lot of different engines. In Netflix, when we created this, we were using Pig, Hive, Spark, Trino, which was then called Presto, Flink, and a bunch of other custom things as well. So, we needed something that could share immutable data files without hardly any coordination. That was our fundamental challenge here. And that does dictate what techniques we can pull in from the database world. So, for example, there's no write-ahead log, because a shared write-ahead log is extremely hard to do. 
+
+[0:10:16] LA: Okay. That makes sense. Again, you're optimized on heavy read usage, very little write, obviously, that's the analytics use case, is what we're talking about here. That alone helps with the optimization. Also, I'm assuming at this point, you assume that you own the files, which means you can manipulate the files or manipulate the position of the files. I know, they're read-only, but you manipulate whether they're located, write alternate versions of them, et cetera, et cetera, et cetera, and do that on the fly owned by the library, without having to worry about compatibility with non-library-based access. 
+
+[0:11:00] RB: That is true. One of the biggest decisions we made early on was to break compatibility with the Hive table format. We said, what we're doing requires that we own the files, and be able to do things like write new data files in place, even if they're right beside files that would be interpreted as both live in a Hive table. We broke with that. I think that the project was really better off for having done that, because we started from the beginning, assuming that you're coming through the library or something compatible with the Iceberg table spec.
+
+[0:11:41] LA: I look at some of the key features in Iceberg, in your schema evolution, versioning, time travel, and variety of query engines. Those are kind of the main ones that I think about. Let's focus first on the schema evolution, which obviously, as we've talked about, is critical for data management. But how specifically do you deal with it? If you add a column, delete a column, are you rewriting files? Or are you appending supplementary data with those files? How do you deal with that? What exactly are you doing?
+
+[0:12:13] RB: This is one area where we straight up stole what databases do. Basically, when you create a new column, or a new field anywhere, it could be a nested column within a map of maps of structs, for example. We assign a brand-new ID to that data. That gives us a level of indirection from names to IDs, and then IDs to data. So, that we get SQL schema evolution semantics. This is where, if you drop column A and then add a column with the same name, straight normal parquet will resurrect that column, because it's saying, â€œI'm looking for column A, I found column A. This is that column.â€ 
+
+Whereas in Iceberg, you've got column A that represents ID five, and you drop it, and then you create column A, that represents ID seven, and they're completely different data. That one level of indirection is all you need in order to implement fully SQL-compatible schema evolution.
+
+[0:13:20] LA: I was intrigued when I first started reading about this, about the data versioning and time travel in particular. I find a lot of interesting use cases that can come for that. Let's talk about that in a little bit more detail. First of all, can you describe to the listeners what is data versioning? And what is time travel?
+
+[0:13:41] RB: Yes, no problem. So, you remember how I was mentioning that Iceberg is based on immutable files. What we do is we keep this tree of metadata that eventually points to immutable data files. Well, if you want to have a very simple system for moving from one version to another, that transitions atomically, you just have multiple routes, multiple tree routes. So, you have one route that represents one version, and another route that represents another version, and swapping one single pointer, however you choose to do that. We use a database most of the time. Swapping that pointer gives you this fully atomic transition from one version of the table to the next. So, that's how we guarantee atomicity and it's the basis for all of our ACID transactions in the format.
+
+Out of that pops a really handy feature, which is that if you keep track of the old tree roots, you have time travel capabilities. So, it's really fantastic that you can just easily keep around these trees. It's actually â€“ if listeners are familiar with the structure of a git repository â€“
+
+[0:14:58] LA: I was just thinking that exact same thing. This is how Git works.
+
+[0:15:02] RB: From that, we also get the newer features. So, not just the ability to travel backwards in time. Each tree is called a snapshot. Because it's a complete snapshot of the table. We create new snapshots by only changing the parts of the tree that need to be changed, which is how we get low write amplification. So, we're not writing a ton of metadata each time. We get time travel by keeping track of multiple tree roots, and then we also get branching and tagging by having multiple pointers to those tree roots.
+
+[0:15:35] LA: So, it really is the same sort of model that Git uses, is just the interface on top is an SQL base for, specifically, formatted data files versus arbitrary blobs, which is what Git uses?
+
+[0:15:49] RB: Yes. There are a few other, I think, pretty important distinctions between Git and a database table, or Iceberg using that same model. First of all, is, if you have a table that is a multi-petabyte table, some of our early use cases, people went to Iceberg because nothing else would scale, and that's how we got our initial users. If you have a multi-petabyte table, and you're doing any routine maintenance on it, you're rewriting those data files. Maybe you're compacting them, something like that, and your data balloons real quick.
+
+So, unlike Git that keeps all history back until the first start of the repository, we actually need to clean up those older versions over time. Usually, you keep about a five-day to seven-day window. You want enough time, that if you need to roll the table back to an old version, or figure out what went wrong over a long four-day weekend, you can go debug, but you don't keep infinite history. That's just very, very wasteful.
+
+I have another distinction, that has to do with transactions. I'll probably toss it back to you, because I was getting into the minutiae.
+
+[0:17:09] LA: Sure. Well, I was going to ask about transactions. But let's stay on this for a moment then. You talk about the data changing. But to be clear, for the most part, data changes are either schema evolutions. You're adding a column and data is populated, and then I call them, or they are data compression of some sort. You're not doing arbitrary database inserts and updates and data modification sorts of operations on these data files. You're doing cleanup and data format adjustments is what you're doing. Is that a fair statement? Or is that too limiting?
+
+[0:17:49] RB: So, Iceberg itself, the core library provides some primitives, and usually those primitives are about how to make modifications to the file tree. So, an append operation is take this set of data files and add them to my tree. Add them to the current version and commit that. You could also have an overwrite operation that says remove these data files and replace them with these data files. So, that's the level of the Iceberg API.
+
+But once Iceberg is integrated into a database, like Spark, or like Trino, or Flink, and others, you start using those building blocks to create high-level SQL operations. So, the Iceberg project had for a long time, merge, update, delete, and those are a row level, very much data warehouse operations that were built in Spark. Eventually, we actually moved the implementation from the iceberg project into the Spark project, so that merge into is now implemented in Spark 3.5 and later. And Iceberg is something that you plug in to implement the file side of those operations.
+
+So, Spark will go, create a whole bunch of data files and say, â€œHey, swap those files for these files.â€ And that's the level at which it calls the Iceberg API, but you ended up with the high-level database operations.
+
+[0:19:16] LA: The answer to the question is, it depends on the database engine that you're using, whether or not you're doing mostly reads or some combination of real database, sorts of reads and writes. But obviously, the more you get into doing database change operations, versus database reading operations, the less performant you get, because you end up with a lot more cleanup and a lot more duplicated files. That's all that sort of stuff. So, you're optimized for the read-only case, but you support and allow pretty much any database operation.
+
+[0:19:54] RB: Yes. So, there's a certain separation of responsibilities where Iceberg is really the manager of table metadata, and it plugs into Spark or other engines. I'm most familiar with Spark, because I was part of the design of how these things plug into Spark. The data source v2 read and write path. So, it's all about how do we have a generic API for some Datastore, that supports high-level spark operations on top. You are more limited with the API. Certainly, Spark is something that can parallelize an operation, make things go very fast, by taking advantage of multiple machines in a cluster, stuff like that. 
+
+At the opposite end, you could have like a DuckDB that is doing everything locally. They both use the same API at the end of the day, or would use the same API to make modifications to the table.
+
+[0:20:53] LA: So, to clarify, for our listeners, that really what we're talking about here is, a solution to a data analytics problem involves a three-layer system here. You have a query engine. You have the translation layer, which is what Iceberg is. And then you have a cloud storage system, or some sort of storage system like S3. So, you need all three of those in order to have a true data analytics system. You enter the SQL into the query engine, it does the file manipulation through Iceberg that takes advantage of the distributed cloud data storage. That's the architecture we're talking about here.
+
+[0:21:37] RB: Yes. It's actually very interesting how Iceberg and similar projects are changing this space. Because I mentioned an assumption of what we were building with Iceberg was like a Hive table format that actually worked and had strong guarantees. Because we assumed that we were going to be writing from Flink, moving data around using data services, running ETL jobs in Spark, consuming things in Trino. We had this multi-engine world and everything needed to work seamlessly, and without problems. That actually is not how databases or data warehouses have been traditionally broken down. Now, we've got this â€“ what Iceberg uniquely does, is it brings in the ability to have a swappable storage layer. It's the storage layer that you can use underneath Spark. But you can also use it underneath Snowflake now, which is really crazy. When Snowflake started adding support, we were quite surprised.
+
+But it makes sense because it enables this architecture, that, again, was an assumption of what we were building, it really truly enables you to have one central store of data and use streaming engines, ad hoc engines, distributed ETL engines like Spark. You can do streaming and batch and basically everything on the same store of data. You can have one copy, manage it in one place, and use it everywhere, which is sort of a â€“ I call this a quiet revolution in the database industry, because that's never been done before.
+
+[0:23:17] LA: I mean, people keep talking about data lakes and how to keep your single source of truth. But it's never quite that simple. It's always a lot more complicated than that.
+
+[0:23:27] RB: Yes, exactly. It was the dream of data lakes. But data lakes, Hive or other formats really didn't live up to that dream. Now, we can actually do it and I think it's pretty interesting and it'll be fun to see where the database industry goes over the next 5 to 10 years.
+
+[0:23:47] LA: Right. I should know this, but I don't. But how old is Iceberg? Iceberg is relatively new. I mean, as far as its popularity standpoint. Is it just within the last few years that it's really become a major player? I mean, I don't know what the right word to use there. But you know what Iâ€™m saying.
+
+[0:24:06] RB: I don't know. Yes, I think the awareness of it has been fairly recent. It feels like we are on the uptick on that adoption curve. We started it in August 2017. I want to say we open sourced it in maybe December or January. We knew that if we were going to be embarking on this project, we wanted it to be something that was not just us at Netflix, right? We had solutions around a lot of things, pain points in this area, and we were spending a lot of time maintaining them, and moving them from version to version of our processing engines, and it was just kind of a mess. So, we knew that whatever we did here, we wanted to get it right, so that it would be broadly adopted, and we wanted it to be open source, so that we could collaborate with other people on it.
+
+Very quickly, we started talking to other companies that we knew going and recruiting contributors. So, we worked very closely with Apple to really get the project into production state, at a lot more people like Expedia was a great early contributor. Same thing with Salesforce, Pinterest, LinkedIn, and others. It stayed there for a while. It stayed in the large tech company space where you have 60 to 100-person data platform teams. And that was really helping those data platform teams, and along the way, we also rebuilt the data source interface in Spark to be able to plug it in. We added integration with Trino. There was a lot of work, and then we donated it to the Apache Software Foundation got out of incubation.
+
+So, there was a long time when we were in that building phase, and then just the last couple of years, it has been more changing from builders to users, right? Because a lot more people should be able to take advantage of this. It's a really cool thing that we can safely share data underneath multiple engines, and do so with SQL semantics, and guarantees, and be able to build data services that do things that previously we had people doing. It's really vague.
+
+[0:26:28] LA: So, I'm going to jump back to the one topic that we stopped when we first started mentioning it, because I wanted to get back to it later and that's transactions. So, database transactions are always a fun topic in general to be talking about, and I can imagine in this sort of a model, they're even more complex. I'm beginning to see given how your architecture works, how transactions might be implemented. But I wonder if you could give a little bit more detail on exactly how they work within. First of all, what sorts of transaction guarantees do you provide? Youâ€™re ACID-compliant, obviously. But what sort of transaction guarantees do you provide? And what's the tricks to make that happen?
+
+[0:27:10] RB: Yes. Great question. This is kind of a fun area. So, we currently provide single-table transactions. Essentially, you can imagine the tree structure I was talking about before. You can transition from one tree root or one version snapshot of the table to the next. Or you can write five and skip from one to all the way to the end. So, single table transactions are essentially that.
+
+[0:27:38] LA: That's a pretty easy thing to do, like you say. It's a matter of pointer is moving around is really what the implementation really is. That's similar to the Git commit model, right? You can atomically move from one version of the file to another, simply by moving a pointer.
+
+[0:27:56] RB: That is the key distinction there. So, we have atomicity down, right? It's very easy to have multiple operations in one atomic unit and that is a very big step forward. But it doesn't mean it's a database transaction. Because you still have consistency, and isolation, and not so much durability. Durability is we use optimistic concurrency. So, you write everything out, and then you swap that pointer. So, you've written everything to disk before. Like I said earlier, we're not using a write-ahead log. We're not using in-memory updates or anything like that. Everything gets written to the object store. So, durability is not really a big concern.
+
+The remaining one is the consistency in isolation. And isolation, there are some good things and some bad things. First of all, like transactional database isolation has a lot of things like dirty reads, repeatable reads, and stuff like that. Again, because we're writing everything out and we're using sort of an optimistic approach, you write it out, and then hopefully, you swap the pointer. The repeatable or dirty reads, reads are always repeatable, and they're never dirty, which is great, right? Your transaction either always goes through or not at all. It puts a lot of the onus on the right path to fix it. Of course, if it fails, because someone else committed a transaction, it retries effectively and tries to not do as much work and that sort of thing.
+
+So, the thing that is really the sticking point is the isolation levels above snapshot isolation. We have snapshot isolation, which is we'll apply the changes to whatever happened to be the state of the table at the start, when we started this operation, that snapshot. On the other hand, serializable isolation is saying that there is some ordering of transactions that produces this table state. In that case, let me give an example. It's easier to understand with an example.
+
+Say, I have a process that's adding records, and a process that's deleting records at the same time. I say delete from Table T, where ID equals five. At the same time, I have insert into Table T, ID five, right? So, depending on the ordering of those transactions, one, will delete anything with ID five that exists, the other will add a new ID five. If they're out of order, what happens?
+
+Under snapshot isolation, if the delete starts, and the append then commits, and then the delete commits, ID five is in that table, because it wasn't in that table when I started the transaction. So, it's from the beginning of the transaction. Under serializable isolation, because I'm saying the order of these things is that the append happened before the delete, ID five cannot exist in that table. So, you have to check for anything that would have affected any newer transactions or commits that would have affected the state of the table. Then, you need to deal with that. You can either fail and retry. Or maybe you can go say, â€œWell, I'm going to update that and roll back that transaction.â€ There are a number of things you can do. That's all up to the engine. Icebergâ€™s role in this is saying, â€œHey, we've detected something that violates your isolation guarantee, or consistency guarantee, really.â€
+
+[0:31:47] LA: Got it. So, the hard part of the transaction is part of the query engine, but the detection, which is the most critical part of it is something that youâ€™re actually taking care of.
+
+[0:31:59] RB: Exactly. It's interesting, this is where we get back to the Git model. So, you would think that you might have an easier time. We can branch and we can like fast forward and do all these things, and people like to think of this as a way of implementing database transactions. But you can't use that model. You can't just say, â€œTake the insertions and deletions of data files, and apply them over here on another branch, and get the exact same semantic meaning.â€ It's a lot like, if you've ever pulled from a Git repo rebase your changes on top of what happened, and everything goes through just fine, but it no longer compiles. That's because we think of Git more at this semantic level. But it's actually at the physical level. It's like, â€œHey, go replace this line with this thing, and that line with this other line.â€
+
+So, if you rename a variable, in one case, you can rename all of those variables. But if I have added a variable in a different commit, then we can both apply our changes physically. You named all the instances that existed before I did anything. And then I added a new reference to that variable. Well, that variable doesn't exist in the combined result. So, you have to think about this at, both the physical level, which is what Iceberg manages, and at the semantic level, which is what's managed by the database itself.
+
+[0:33:30] LA: By the query engine, where the data. Yes. Cool.
+
+[0:33:34] RB: Yes, sorry. The database is now a nebulous term. We should go with storage engine and query engine.
+
+[0:33:41] LA: Yes. I knew what you meant. But it makes perfect sense. So, let's talk about migration here for a moment. Large existing organization that has giant multiple petabytes, multiple mega petabytes, large datasets, and are not using Iceberg today, and want to move to an Iceberg model. What's involved in them doing that? It is a switch, right? They have to move off of their old model onto Iceberg, atomically.
+
+[0:34:17] RB: Atomically. Yes. Now, that isn't as hard as it sounds. There are a number of concerns. But the most basic thing is go out and find all the files in your table, build Iceberg metadata around those files, and then switch to using the Iceberg metadata. So, both of the most common engines here, Spark and Trino, have a way of overriding in cases like this. You can basically go, everything reads from your Hive table, you build the metadata, and then you atomically create a table with that metadata, and the act of creating the table with the metadata now redirects, when Spark looks it up, it's going to see the Iceberg table instead of the Hive table. So, that atomic operation is actually the simple part, where you can use data in place.
+
+Now, there are some details I'm going to overlook here, like transitioning from name-based column resolution to ID-based column resolution. That happens automatically for you. In fact, Iceberg has stored procedures that you call to say, â€œGo grab all those data files and create a table from them. Basically, migrate this Hive table to Iceberg.â€ And that is one of the details that we handle there. The bigger problem is actually knowing that it's safe to run that operation, that you don't have anything that can't read Iceberg tables.
+
+[0:35:54] LA: Which brings me to the rollback question is, once you've made this transition, and you can do it â€œatomicallyâ€, pretty reasonably. Can you roll back if you haven't â€“ if you've discovered an application that can't use Iceberg yet for some reason? Makeup whatever reason you want. Can you easily roll back and try again later? Or is the migration a dirty migration?
+
+[0:36:25] RB: It is, unfortunately, a dirty migration. So, what we opted to do originally, was to essentially not break any anyone using Hive. Because in a Hive table, imagine just an unpartitioned, Hive table, you have files sitting on disk, and whatever you list in that directory is live in the table. So, imagine you have this consumer consuming from the Hive table that you don't know about, and then you start modifying it through some other reference as an Iceberg table.
+
+[0:37:01] LA: It's going to be writing more files and storing more data in the same locations.
+
+[0:37:05] RB: Right. We opted to do â€“ yes, so say you convert it to an Iceberg table, and you immediately compact the files. You say, â€œGreat. I've now compacted these five files into one file.â€ Well, if we were to do that compaction on the original table, we would just add the file to that directory. Now, your unknown Hive consumer sees duplication. You see this problem from, â€œOh, no, something is really wrong with our data.â€ Rather than, â€œHey, this thing seems stale.â€
+
+So, what we did is we opted to write the new data files in a different directory. We create a data directory, and that's where we write all the new files. That keeps the old Hive structure separate from the Iceberg structure, and we think itâ€™s actually safer for mistakes in transition overall.
+
+[0:37:56] LA: That would facilitate an easy rollback.
+
+[0:38:01] RB: It would facilitate an easy rollback to the original state of the table when you branched. 
+
+[0:38:06] LA: But not a lot of changes.
+
+[0:38:09] RB: If you've moved your write operation over to the Iceberg table, then you're going to miss some updates and need to, we think, go back in your pipeline, and replay those operations on the Hive table. I think that that is probably the best trade-off here. But there is no good solution for it. It's primarily because Hive will see anything you write in those directories as live data. So, we cannot make any changes to the original Hive directories.
+
+There's also another problem here, where you might have a writer that continues writing to that Hive table. In that case, you kind of want to detect the files and then move them over. So, there are a number of migration scenarios here that are a little sticky. We've seen it all. Having done this for the last five years, we've seen a lot of messy things. I think my best practice is to try and not roll back. That's why we have both migrate and snapshot stored procedures.
+
+So, the snapshot stored procedure creates that Iceberg metadata under a different table name. What you can do is run snapshot, test your writers, test your readers, make sure everything that you know about works, and then migrate that table to actually flip it over in place. Now, then you have this issue of, â€œWell, what about my unknowns? What about that process that just goes in? Or a data scientist that just goes and reads from s3?â€ There's not a great solution to that, unfortunately. I think that we're getting as close as we can and what we do, or what we recommended at my company is actually to go look at the S3 access logs. So, part of our default setup is get those S3 access logs, put them in a table, so you can just go explore, and then select from there and go see, â€œWho is actually reading this table?â€ Because that's the ground truth. And then you track everyone down that way. That's the easiest way so you don't miss anyone.
+
+[0:40:22] LA: That makes a lot of sense. Cool. But just like anything, a migration of data is a very complex thing. This problem exists for you as it does for anything, but it sounds like you've thought through a lot of the key scenarios anyway, and not only thought through, but practiced through, some of the key scenarios.
+
+[0:40:44] RB: Yes. They got burned.
+
+[0:40:46] LA: I thought it'd be a little bit nicer about it than that. But basically, it's easy to get burned with data migrations.
+
+[0:40:52] RB: Yes, it's not too bad. There are a lot of experts out there. A lot of people have been doing this. Just do your research. I'm sure it's doable.
+
+[0:41:03] LA: So, if someone wants to learn more about Iceberg, what can you point them to, as far as where they can go, and learn more about implementing an Iceberg solution within their own data warehouses?
+
+[0:41:16] RB: I would recommend two resources. The first one is a book that my company just put out on Apache Iceberg. The Apache Iceberg cookbook. We intended it to be a very practical, almost purely open-source iceberg. It's not like we recommend tabular to solve all of your problems. We go over the open source migrate and snapshot commands and things like that. We want that to be a resource to basically, learn a whole lot more.
+
+Then the second place I would recommend is the Iceberg Slack. So, if you go to the Iceberg community page, there's a link to join our Slack community. There are a ton of really helpful people there. Just come, join the community, and ask questions.
+
+[0:42:00] LA: I imagine, if you're a developer and are interested in helping with the Iceberg cause, thatâ€™s also a good place to go.
+
+[0:42:07] RB: Oh, absolutely. We love contributions. Like I said, we really wanted this to be an open community, something that everyone could use, and that everyone could invest in, not just big companies or small companies, but also vendors, right? We wanted it to be a neutral place, because migration is hard. We're just talking about migration. The nice thing about having a table format that can be used underneath any engine, even commercial ones, like Redshift, and Snowflake, is that hopefully this is the last migration for a while.
+
+[0:42:42] LA: Besides building Iceberg, you're the CEO for Tabular. What can you tell me about Tabular?
+
+[0:42:50] RB: So, Tabular is the platform that we always we're working towards at Netflix. We realized when we were there that not every company has the kind of data team and data platform team that we did. To really, I think, help people use and take advantage of the project, we wanted there to be a platform that you can just sign up for. SaaS-hosted catalog and security system and services that keep your tables. We talked about aging off old snapshots. We do that automatically, so you don't have to worry about it. It's those sorts of things. So, that's what we're building. It's been called a headless data warehouse. I like to think of it as the bottom half of the database. As we've pulled apart a data warehouse, weâ€™re the bottom half. We have the storage layer, or storage engine, that's our product. Then, you can easily connect it up to Snowflake, or EMR, or Redshift, or Starburst, and Trino, and Spark, and anything else in that space. I think it's going to be really cool to see how people use it and how it grows. Because this is an entirely new area where you're separating storage from compute. 
+
+[0:44:07] LA: Right. So, if someone wants to learn about Tabular, where should they go for that? 
+
+[0:44:12] RB: Tabular.io.
+
+[0:44:13] LA: Tabular.io. Great. Well, thank you. My guest today has been Ryan Blue, who's one of the creators of Apache Iceberg and he is the CEO of tabular.io. Ryan, thank you very much for joining me today on Software Engineering Daily.
+
+[0:44:29] RB: Thanks for having me. This was a lot of fun.
+
+[END]
